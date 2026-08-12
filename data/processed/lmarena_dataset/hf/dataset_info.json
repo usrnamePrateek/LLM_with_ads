@@ -1,0 +1,56 @@
+{
+  "builder_name": "parquet",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "arena-human-preference-140k",
+  "dataset_size": 3030532587,
+  "description": "",
+  "download_size": 1613803705,
+  "features": {
+    "id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "model": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "query": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "llm_response": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "timestamp": {
+      "dtype": "timestamp[ns]",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 4644336292,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 3030532587,
+      "num_examples": 135634,
+      "shard_lengths": [
+        22377,
+        23377,
+        23376,
+        22376,
+        22376,
+        21752
+      ],
+      "dataset_name": "arena-human-preference-140k"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}
