@@ -3,8 +3,4 @@
 __pycache__/
 .ipynb_checkpoints/
 *.pyc
-<<<<<<< HEAD
 lmarena-env/
-=======
-.lmarena-env/
->>>>>>> 6ce98ef (categorizing lmarena queries)
