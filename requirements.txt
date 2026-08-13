@@ -3,6 +3,7 @@ pandas==2.3.3
 pyarrow==15.0.2
 sentence-transformers
 transformers
+vllm
 hdbscan
 cuml-cu12==25.10.0
 cupy-cuda12x==13.6.0
@@ -10,3 +11,5 @@ scikit-learn==1.6.1
 umap-learn
 matplotlib
 tqdm
+google-genai
+python-dotenv
