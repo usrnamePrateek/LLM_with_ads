@@ -3,6 +3,7 @@ pandas==2.3.3
 pyarrow==15.0.2
 sentence-transformers
 transformers
+faiss-cpu
 # vLLM: do not install from this file (PyPI wheel is CUDA 13).
 # Use docs/requirements-vllm.txt instead.
 hdbscan
