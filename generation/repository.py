@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from generation.config import QUERY_COLUMN
-from generation.models import QueryTopAd
+from generation.models import PlacedAdResponse, QueryTopAd
 
 
 class QueryDatasetRepository:
@@ -32,3 +32,22 @@ class AssignmentCsvRepository:
         frame = pd.DataFrame([row.to_dict() for row in rows])
         frame.to_csv(path, index=False)
         print(f"Saved {len(rows):,} rows to {path}")
+
+
+class PlacedAdCsvRepository:
+    def save(self, rows: list[PlacedAdResponse], path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        frame = pd.DataFrame([row.to_dict() for row in rows])
+        frame.to_csv(path, index=False)
+        print(f"Saved {len(rows):,} rows to {path}")
+
+    def load_assignments(self, path: Path) -> pd.DataFrame:
+        if not path.exists():
+            raise FileNotFoundError(f"assignment csv not found: {path}")
+        frame = pd.read_csv(path)
+        required = ["id", "ad_id", "ad_domain", "headline", "description", "cta"]
+        missing = [col for col in required if col not in frame.columns]
+        if missing:
+            raise ValueError(f"assignment csv missing columns {missing}")
+        print(f"Loaded {len(frame):,} ad assignments from {path}")
+        return frame
