@@ -6,14 +6,23 @@ import pandas as pd
 
 from ad_retrieval.embeddings.base import EmbeddingEncoder
 from ad_retrieval.store.base import VectorStore
-from generation.config import AD_POSITIONS, ID_COLUMN, LLM_RESPONSE_COLUMN, QUERY_COLUMN, TOP_K
-from generation.models import PlacedAdResponse, QueryTopAd
+from generation.config import (
+    AD_POSITIONS,
+    DEFAULT_SEMANTIC_PARAS_CSV,
+    ID_COLUMN,
+    LLM_RESPONSE_COLUMN,
+    QUERY_COLUMN,
+    TOP_K,
+)
+from generation.models import PlacedAdResponse, QueryTopAd, SemanticParagraphScore
 from generation.placement import format_ad_block, place_ad
 from generation.repository import (
     AssignmentCsvRepository,
     PlacedAdCsvRepository,
     QueryDatasetRepository,
+    SemanticParagraphCsvRepository,
 )
+from generation.semantic import score_chunks
 
 
 class AssignTopAdService:
@@ -80,16 +89,23 @@ class PlaceAdsInResponsesService:
         queries: QueryDatasetRepository,
         assignments: PlacedAdCsvRepository,
         writer: PlacedAdCsvRepository,
+        semantic_writer: SemanticParagraphCsvRepository,
+        encoder: EmbeddingEncoder,
+        store: VectorStore,
     ) -> None:
         self._queries = queries
         self._assignments = assignments
         self._writer = writer
+        self._semantic_writer = semantic_writer
+        self._encoder = encoder
+        self._store = store
 
     def run(
         self,
         dataset_path: Path,
         ads_csv_path: Path,
         output_path: Path,
+        semantic_output_path: Path = DEFAULT_SEMANTIC_PARAS_CSV,
         query_column: str = QUERY_COLUMN,
         limit: int | None = None,
     ) -> list[PlacedAdResponse]:
@@ -104,8 +120,18 @@ class PlaceAdsInResponsesService:
             merged = merged.head(limit).copy()
         print(f"Placing ads for {len(merged):,} queries ...")
 
-        rows: list[PlacedAdResponse] = []
-        for _, row in merged.iterrows():
+        if output_path.exists():
+            output_path.unlink()
+        if semantic_output_path.exists():
+            semantic_output_path.unlink()
+
+        vector_cache: dict[str, object] = {}
+        placed: list[PlacedAdResponse] = []
+        placed_buffer: list[PlacedAdResponse] = []
+        semantic_buffer: list[SemanticParagraphScore] = []
+        wrote_placed = False
+        wrote_semantic = False
+        for n, (_, row) in enumerate(merged.iterrows(), start=1):
             query_id = "" if pd.isna(row[ID_COLUMN]) else str(row[ID_COLUMN])
             query = "" if pd.isna(row[query_column]) else str(row[query_column])
             llm_response = "" if pd.isna(row[LLM_RESPONSE_COLUMN]) else str(row[LLM_RESPONSE_COLUMN])
@@ -113,20 +139,60 @@ class PlaceAdsInResponsesService:
             description = "" if pd.isna(row["description"]) else str(row["description"])
             cta = "" if pd.isna(row["cta"]) else str(row["cta"])
             ad_block = format_ad_block(headline, description, cta)
-            for position in AD_POSITIONS:
-                rows.append(
-                    PlacedAdResponse(
+            ad_id = "" if pd.isna(row["ad_id"]) else str(row["ad_id"])
+            if not ad_id:
+                continue
+            if ad_id not in vector_cache:
+                vector_cache[ad_id] = self._store.get_vector(ad_id)
+            ad_vector = vector_cache[ad_id]
+            paragraphs, scores = score_chunks(llm_response, ad_vector, self._encoder)
+            best_idx = int(scores.argmax()) if len(scores) else 0
+            n_paragraphs = len(paragraphs)
+            for idx, (paragraph, cosine) in enumerate(zip(paragraphs, scores)):
+                semantic_buffer.append(
+                    SemanticParagraphScore(
                         query_id=query_id,
                         query=query,
-                        ad_id="" if pd.isna(row["ad_id"]) else str(row["ad_id"]),
-                        ad_domain="" if pd.isna(row["ad_domain"]) else str(row["ad_domain"]),
-                        headline=headline,
-                        description=description,
-                        cta=cta,
-                        position=position,
-                        llm_response=llm_response,
-                        response_with_ad=place_ad(llm_response, ad_block, position),
+                        ad_id=ad_id,
+                        paragraph_index=idx,
+                        n_paragraphs=n_paragraphs,
+                        paragraph=paragraph,
+                        cosine=float(cosine),
+                        is_best=idx == best_idx,
                     )
                 )
-        self._writer.save(rows, output_path)
-        return rows
+            for position in AD_POSITIONS:
+                row_out = PlacedAdResponse(
+                    query_id=query_id,
+                    query=query,
+                    ad_id=ad_id,
+                    position=position,
+                    response_with_ad=place_ad(
+                        llm_response,
+                        ad_block,
+                        position,
+                        chunks=paragraphs,
+                        best_chunk_index=best_idx,
+                    ),
+                )
+                placed.append(row_out)
+                placed_buffer.append(row_out)
+            if n % 1000 == 0:
+                print(f"  placed {n:,}/{len(merged):,}")
+                if placed_buffer:
+                    self._writer.save(placed_buffer, output_path, append=wrote_placed)
+                    wrote_placed = True
+                    placed_buffer = []
+                if semantic_buffer:
+                    self._semantic_writer.save(
+                        semantic_buffer, semantic_output_path, append=wrote_semantic
+                    )
+                    wrote_semantic = True
+                    semantic_buffer = []
+        if placed_buffer:
+            self._writer.save(placed_buffer, output_path, append=wrote_placed)
+        if semantic_buffer:
+            self._semantic_writer.save(
+                semantic_buffer, semantic_output_path, append=wrote_semantic
+            )
+        return placed

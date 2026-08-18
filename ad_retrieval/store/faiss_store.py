@@ -17,6 +17,10 @@ class FaissVectorStore:
         self._sidecar_path = index_dir / ADS_SIDECAR_FILENAME
         self._index: faiss.Index | None = None
         self._ads: list[Ad] = []
+        self._id_to_row: dict[str, int] = {}
+
+    def _rebuild_id_map(self) -> None:
+        self._id_to_row = {ad.id: i for i, ad in enumerate(self._ads)}
 
     def upsert(self, ids: list[str], vectors: np.ndarray, ads: list[Ad]) -> None:
         if len(ids) != len(ads) or len(ids) != len(vectors):
@@ -30,6 +34,15 @@ class FaissVectorStore:
         index.add(matrix)
         self._index = index
         self._ads = list(ads)
+        self._rebuild_id_map()
+
+    def get_vector(self, ad_id: str) -> np.ndarray:
+        if self._index is None:
+            raise RuntimeError("vector store is empty; build or load an index first")
+        row = self._id_to_row.get(ad_id)
+        if row is None:
+            raise KeyError(f"ad id not in index: {ad_id}")
+        return np.asarray(self._index.reconstruct(row), dtype=np.float32)
 
     def query(self, vector: np.ndarray, k: int) -> list[ScoredAd]:
         if self._index is None or not self._ads:
@@ -78,6 +91,7 @@ class FaissVectorStore:
             )
             for item in records
         ]
+        self._rebuild_id_map()
         if self._index.ntotal != len(self._ads):
             raise ValueError(
                 f"index size {self._index.ntotal} does not match sidecar ads {len(self._ads)}"

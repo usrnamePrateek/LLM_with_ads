@@ -3,21 +3,14 @@ from __future__ import annotations
 import re
 
 from generation.config import AD_POSITIONS
-
-
-def _normalize_text(text: str) -> str:
-    body = text or ""
-    if "\\n" in body:
-        body = body.replace("\\n", "\n")
-    if "\\t" in body:
-        body = body.replace("\\t", "\t")
-    return body.replace("\\'", "'").replace('\\"', '"')
+from generation.semantic import insert_ad_after_best_paragraph
+from generation.splitting import join_chunks, normalize_text, split_paragraphs
 
 
 def format_ad_block(headline: str, description: str, cta: str) -> str:
-    headline_md = _normalize_text(headline).strip()
-    description_md = _normalize_text(description).strip()
-    cta_md = _normalize_text(cta).strip() or "Learn more"
+    headline_md = normalize_text(headline).strip()
+    description_md = normalize_text(description).strip()
+    cta_md = normalize_text(cta).strip() or "Learn more"
     cta_md = cta_md.replace("]", "")
     return (
         "---\n\n"
@@ -29,21 +22,15 @@ def format_ad_block(headline: str, description: str, cta: str) -> str:
 
 
 def format_llm_response(text: str) -> str:
-    body = _normalize_text(text).strip()
-    if not body:
-        return ""
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", body) if p.strip()]
-    if not paragraphs:
-        return body
-    return "\n\n".join(paragraphs)
+    return normalize_text(text).strip()
 
 
 def _split_middle(text: str) -> tuple[str, str]:
-    body = _normalize_text(text)
-    paragraphs = [p for p in re.split(r"\n\s*\n", body) if p != ""]
+    body = normalize_text(text)
+    paragraphs = split_paragraphs(body)
     if len(paragraphs) >= 2:
         mid = len(paragraphs) // 2
-        return "\n\n".join(paragraphs[:mid]), "\n\n".join(paragraphs[mid:])
+        return join_chunks(paragraphs[:mid]), join_chunks(paragraphs[mid:])
 
     sentences = re.split(r"(?<=[.!?])\s+", body.strip())
     sentences = [s for s in sentences if s]
@@ -61,13 +48,31 @@ def _wrap(parts: list[str]) -> str:
     return "\n\n".join(part.strip() for part in parts if part and part.strip())
 
 
-def place_ad(llm_response: str, ad_block: str, position: str) -> str:
+def place_ad(
+    llm_response: str,
+    ad_block: str,
+    position: str,
+    chunks: list[str] | None = None,
+    best_chunk_index: int | None = None,
+) -> str:
     if position not in AD_POSITIONS:
         raise ValueError(f"unknown position {position!r}")
     if position == "first":
         return _wrap([ad_block, format_llm_response(llm_response)])
     if position == "last":
         return _wrap([format_llm_response(llm_response), ad_block])
+    if position == "semantic":
+        if best_chunk_index is None:
+            raise ValueError("semantic placement requires a precomputed best chunk index")
+        paragraphs = chunks if chunks is not None else split_paragraphs(llm_response)
+        before, after = insert_ad_after_best_paragraph(paragraphs, best_chunk_index)
+        return _wrap(
+            [
+                format_llm_response(before),
+                ad_block,
+                format_llm_response(after),
+            ]
+        )
     left, right = _split_middle(llm_response or "")
     return _wrap(
         [

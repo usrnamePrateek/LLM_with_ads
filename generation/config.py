@@ -9,9 +9,14 @@ DEFAULT_QUERIES_PARQUET = DEFAULT_QUERIES_INPUT
 DEFAULT_INDEX_DIR = DEFAULT_INDEX_DIR
 DEFAULT_OUTPUT_CSV = REPO_ROOT / "data/processed/generation/query_top1_ads.csv"
 DEFAULT_PLACED_ADS_CSV = REPO_ROOT / "data/processed/generation/query_ad_positions.csv"
+DEFAULT_SEMANTIC_PARAS_CSV = (
+    REPO_ROOT / "data/processed/generation/query_semantic_paragraphs.csv"
+)
 QUERY_COLUMN = "query"
 ID_COLUMN = "id"
 LLM_RESPONSE_COLUMN = "llm_response"
-AD_POSITIONS = ("first", "middle", "last")
+AD_POSITIONS = ("first", "middle", "last", "semantic")
 TOP_K = 1
 ENCODE_BATCH_SIZE = 32
+CHUNK_SIZE = 800
+CHUNK_OVERLAP = 0

@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from generation.config import QUERY_COLUMN
-from generation.models import PlacedAdResponse, QueryTopAd
+from generation.models import PlacedAdResponse, QueryTopAd, SemanticParagraphScore
 
 
 class QueryDatasetRepository:
@@ -35,10 +35,21 @@ class AssignmentCsvRepository:
 
 
 class PlacedAdCsvRepository:
-    def save(self, rows: list[PlacedAdResponse], path: Path) -> None:
+    def save(
+        self,
+        rows: list[PlacedAdResponse],
+        path: Path,
+        *,
+        append: bool = False,
+    ) -> None:
+        if not rows:
+            return
         path.parent.mkdir(parents=True, exist_ok=True)
         frame = pd.DataFrame([row.to_dict() for row in rows])
-        frame.to_csv(path, index=False)
+        if append and path.exists():
+            frame.to_csv(path, mode="a", header=False, index=False)
+        else:
+            frame.to_csv(path, index=False)
         print(f"Saved {len(rows):,} rows to {path}")
 
     def load_assignments(self, path: Path) -> pd.DataFrame:
@@ -51,3 +62,22 @@ class PlacedAdCsvRepository:
             raise ValueError(f"assignment csv missing columns {missing}")
         print(f"Loaded {len(frame):,} ad assignments from {path}")
         return frame
+
+
+class SemanticParagraphCsvRepository:
+    def save(
+        self,
+        rows: list[SemanticParagraphScore],
+        path: Path,
+        *,
+        append: bool = False,
+    ) -> None:
+        if not rows:
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        frame = pd.DataFrame([row.to_dict() for row in rows])
+        if append and path.exists():
+            frame.to_csv(path, mode="a", header=False, index=False)
+        else:
+            frame.to_csv(path, index=False)
+        print(f"Saved {len(rows):,} paragraph rows to {path}")

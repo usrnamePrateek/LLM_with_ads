@@ -14,6 +14,9 @@ class VectorStore(Protocol):
     def query(self, vector: np.ndarray, k: int) -> list[ScoredAd]:
         ...
 
+    def get_vector(self, ad_id: str) -> np.ndarray:
+        ...
+
     def save(self) -> None:
         ...
 
