@@ -26,7 +26,7 @@ Matches user queries to relevant ads and inserts them into the generated respons
 Evaluates the quality and flow of the injected advertisements.
 - **`scripts/score_placements.py`**: Uses a large LLM (e.g., Llama-3.3-70B) acting as an expert digital marketer to score the contextual relevance, coherence, and flow disruption of the ad placement on a 1-5 scale. Supports checkpointing/resumption.
 
-## Shared Configuration
+## Shared Configuration (`src/common/`)
 
 - **`shared_config.py`**: Contains global configuration variables (model names, file paths, batch sizes) used across all modules.
 - **`shared_llm.py`**: Contains the `BaseVllmGenerator` class, which handles centralized `vLLM` instantiation, token truncation, and chat template formatting.
@@ -38,5 +38,6 @@ All scripts are designed to be run as modules from the project root using the `.
 Example:
 ```bash
 # Run the placement evaluation judge
-python -m placement_testing.scripts.score_placements --limit 100
+python -m src.placement_testing.scripts.score_placements --limit 100
 ```
+
