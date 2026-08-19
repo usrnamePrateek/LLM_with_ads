@@ -35,14 +35,34 @@ class ScorePlacementsService:
         frame = self._inputs.load(positions_path, ads_path)
         if limit is not None:
             frame = frame.head(limit).copy()
-        print(f"Scoring {len(frame):,} placements ...")
-
+        wrote_any = False
         if output_path.exists():
-            output_path.unlink()
+            existing = pd.read_csv(output_path, dtype=str)
+            scored_keys = set(
+                zip(existing["id"], existing["ad_id"], existing["position"])
+            )
+            before = len(frame)
+            frame = frame[
+                ~frame.apply(
+                    lambda r: (
+                        "" if pd.isna(r["id"]) else str(r["id"]),
+                        "" if pd.isna(r["ad_id"]) else str(r["ad_id"]),
+                        "" if pd.isna(r["position"]) else str(r["position"]),
+                    )
+                    in scored_keys,
+                    axis=1,
+                )
+            ].copy()
+            wrote_any = True
+            print(
+                f"Resuming: {before - len(frame):,} already scored, "
+                f"{len(frame):,} remaining."
+            )
+
+        print(f"Scoring {len(frame):,} placements ...")
 
         all_rows: list[PlacementScore] = []
         buffer: list[PlacementScore] = []
-        wrote_any = False
         for start in range(0, len(frame), batch_size):
             batch = frame.iloc[start : start + batch_size]
             prompts: list[str] = []
