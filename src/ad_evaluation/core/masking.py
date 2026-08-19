@@ -1,3 +1,4 @@
+"""Utilities for masking ad text from LLM judge prompts."""
 from __future__ import annotations
 
 import re
@@ -17,7 +18,11 @@ def mask_ad_in_response(
     description: str,
     cta: str,
 ) -> tuple[str, str]:
-    """Return (masked_response, ad_text)."""
+    """Extracts the ad block from the response and replaces it with a generic slot token.
+
+    Returns:
+        A tuple of (masked_response, original_ad_text).
+    """
     ad_text = format_ad_block(headline, description, cta)
     body = response_with_ad or ""
     if ad_text in body:

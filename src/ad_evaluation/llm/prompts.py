@@ -1,3 +1,4 @@
+"""Prompts and schemas for the LLM-as-a-judge placement evaluator."""
 from __future__ import annotations
 
 PLACEMENT_JSON_SCHEMA = {
@@ -51,6 +52,7 @@ Evaluate the suitability of inserting this advertisement at this position.
 
 
 def build_user_prompt(query: str, masked_response: str, ad_text: str) -> str:
+    """Formats the user query, the masked LLM response, and the ad text for evaluation."""
     return (
         f"Query: {query}\n\n"
         f"Response with ad slot:\n{masked_response}\n\n"

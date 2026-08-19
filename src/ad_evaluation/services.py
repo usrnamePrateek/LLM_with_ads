@@ -1,3 +1,4 @@
+"""Service classes for orchestrating the LLM-as-a-judge evaluation of ad placements."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,14 +7,15 @@ import pandas as pd
 
 from src.ad_evaluation.config import CHECKPOINT_EVERY, DEFAULT_SCORES_CSV, JUDGE_BATCH_SIZE
 from src.ad_evaluation.llm.judge import VllmPlacementJudge
-from src.ad_evaluation.masking import mask_ad_in_response
-from src.ad_evaluation.models import PlacementScore
-from src.ad_evaluation.parsing import parse_placement_score
-from src.ad_evaluation.prompts import build_user_prompt
+from src.ad_evaluation.core.masking import mask_ad_in_response
+from src.ad_evaluation.entities import PlacementScore
+from src.ad_evaluation.llm.parsing import parse_placement_score
+from src.ad_evaluation.llm.prompts import build_user_prompt
 from src.ad_evaluation.repository import PlacementInputRepository, PlacementScoreCsvRepository
 
 
 class ScorePlacementsService:
+    """Coordinates masking the raw ad, generating the LLM judge prompts, and parsing the scores."""
     def __init__(
         self,
         inputs: PlacementInputRepository,
@@ -32,6 +34,7 @@ class ScorePlacementsService:
         limit: int | None = None,
         batch_size: int = JUDGE_BATCH_SIZE,
     ) -> list[PlacementScore]:
+        """Runs the evaluation pipeline over the dataset in batches."""
         frame = self._inputs.load(positions_path, ads_path)
         if limit is not None:
             frame = frame.head(limit).copy()
@@ -89,7 +92,7 @@ class ScorePlacementsService:
                     score, reason = 0, f"parse_error: {exc}"
                 buffer.append(
                     PlacementScore(
-                        query_id=query_id,
+                        id=query_id,
                         query=query,
                         ad_id=ad_id,
                         position=position,

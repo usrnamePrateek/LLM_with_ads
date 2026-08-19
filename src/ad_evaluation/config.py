@@ -1,3 +1,5 @@
+"""Configuration variables for the LLM-as-a-judge placement evaluation pipeline."""
+
 from src.common.shared_config import (
     AD_GPU_MEMORY_UTILIZATION,
     AD_MODEL_NAME,

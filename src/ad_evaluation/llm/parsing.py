@@ -1,9 +1,11 @@
+"""Logic for extracting and validating LLM judge outputs."""
 from __future__ import annotations
 
 from src.ad_generation.llm.parsing import extract_json_value
 
 
 def parse_placement_score(raw: str) -> tuple[int, str]:
+    """Parses a raw LLM response into an integer score and string rationale."""
     payload = extract_json_value(raw)
     if not isinstance(payload, dict):
         raise ValueError("response is not a JSON object")

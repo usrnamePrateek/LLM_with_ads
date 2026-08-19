@@ -1,13 +1,16 @@
+"""Repositories for loading placed ads and saving evaluation scores."""
 from __future__ import annotations
 
 from pathlib import Path
+from dataclasses import asdict
 
 import pandas as pd
 
-from src.ad_evaluation.models import PlacementScore
+from src.ad_evaluation.entities import PlacementScore
 
 
 class PlacementInputRepository:
+    """Loads the dataset of synthetic LLM responses containing formatted ad blocks."""
     def load(self, positions_path: Path, ads_path: Path) -> pd.DataFrame:
         if not positions_path.exists():
             raise FileNotFoundError(f"positions csv not found: {positions_path}")
@@ -30,6 +33,7 @@ class PlacementInputRepository:
 
 
 class PlacementScoreCsvRepository:
+    """Saves the output of the LLM judge to a CSV file."""
     def save(
         self,
         rows: list[PlacementScore],
@@ -40,7 +44,7 @@ class PlacementScoreCsvRepository:
         if not rows:
             return
         path.parent.mkdir(parents=True, exist_ok=True)
-        frame = pd.DataFrame([row.to_dict() for row in rows])
+        frame = pd.DataFrame([asdict(row) for row in rows])
         if append and path.exists():
             frame.to_csv(path, mode="a", header=False, index=False)
         else:

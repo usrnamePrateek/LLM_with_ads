@@ -1,3 +1,4 @@
+"""CLI script to run the LLM judge on synthetically placed ads."""
 from __future__ import annotations
 
 import argparse

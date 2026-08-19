@@ -11,7 +11,7 @@ from src.ad_evaluation.config import (
     JUDGE_MAX_TOKENS,
     JUDGE_MODEL_NAME,
 )
-from src.ad_evaluation.prompts import PLACEMENT_JSON_SCHEMA, PLACEMENT_SYSTEM_PROMPT
+from src.ad_evaluation.llm.prompts import PLACEMENT_JSON_SCHEMA, PLACEMENT_SYSTEM_PROMPT
 
 
 class VllmPlacementJudge(BaseVllmGenerator):
