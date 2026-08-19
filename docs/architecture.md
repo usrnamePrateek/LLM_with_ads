@@ -26,21 +26,21 @@ This document outlines the architecture, data flows, and module responsibilities
   - `shared_config.py`: Contains global file paths (`REPO_ROOT`, `DEFAULT_OUTPUT_CSV`), model names, and batch sizes.
   - `shared_llm.py` (`BaseVllmGenerator`): Base class that encapsulates `vLLM` instantiation, memory utilization, chat templates, and token truncation. Inherited by all task-specific LLM generators to prevent duplicate boilerplates.
 
-### 2. `src/lmarena_prep` (Data Preparation)
+### 2. `src/ad_generation` (Data Preparation)
 - **Purpose**: Downloads the Arena dataset, categorizes queries, and generates ads.
 - **Important Classes**:
   - `VllmCategoryGenerator`: Evaluates query domain/intent (inherits `BaseVllmGenerator`).
   - `VllmAdGenerator`: Generates ad copies (headlines/CTAs) (inherits `BaseVllmGenerator`).
 - **Dependencies**: Depends heavily on `pandas` (for parquet manipulation) and `vLLM`.
 
-### 3. `src/ad_retrieval` (Vector Search)
+### 3. `src/ad_indexing` (Vector Search)
 - **Purpose**: Embeds ad copy and handles similarity searches.
 - **Important Classes**:
   - `BgeM3Embedder`: Wraps `sentence-transformers` for embedding generation.
   - `FaissStore`: Abstraction over `faiss.IndexFlatIP` to store, save, load, and query ad embeddings.
 - **Dependencies**: `faiss-cpu`, `sentence-transformers`, `numpy`.
 
-### 4. `src/generation` (Ad Placement)
+### 4. `src/ad_integration` (Ad Placement)
 - **Purpose**: Matches ads to queries and structurally injects them into the text.
 - **Important Modules/Functions**:
   - `assign_top_ads.py`: Combines the parquet dataset and the FAISS index to map queries to ads.
@@ -48,7 +48,7 @@ This document outlines the architecture, data flows, and module responsibilities
   - `placement.py` (`place_ad()`): Pure function that injects an ad markdown block at a specific structural point (`first`, `middle`, `last`).
   - `semantic.py` (`insert_ad_after_best_paragraph()`): Uses embeddings to find the most contextually relevant paragraph boundary for semantic placement.
 
-### 5. `src/placement_testing` (Evaluation)
+### 5. `src/ad_evaluation` (Evaluation)
 - **Purpose**: Uses an LLM judge to evaluate the quality of the injected ad.
 - **Important Classes/Modules**:
   - `VllmPlacementJudge`: Prompts the model with a strict JSON schema for scoring. 

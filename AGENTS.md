@@ -5,10 +5,10 @@ This project provides a robust data pipeline and evaluation framework for testin
 
 ## High-Level Architecture
 The project follows a modular, sequential pipeline:
-1. **`src/lmarena_prep`**: Data extraction and ad generation.
-2. **`src/ad_retrieval`**: Semantic indexing of ads using FAISS and BGE-M3.
-3. **`src/generation`**: Matching queries to ads and placing them in text via multiple strategies.
-4. **`src/placement_testing`**: LLM-as-a-judge evaluation of ad placements.
+1. **`src/ad_generation`**: Data extraction and ad generation.
+2. **`src/ad_indexing`**: Semantic indexing of ads using FAISS and BGE-M3.
+3. **`src/ad_integration`**: Matching queries to ads and placing them in text via multiple strategies.
+4. **`src/ad_evaluation`**: LLM-as-a-judge evaluation of ad placements.
 5. **`src/common`**: Shared configuration and centralized `vLLM` generator classes.
 
 ## Important Development Constraints

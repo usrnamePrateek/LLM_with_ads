@@ -4,7 +4,7 @@ import torch
 from vllm import LLM, SamplingParams
 from vllm.sampling_params import StructuredOutputsParams
 
-from src.lmarena_prep.parsing import strip_thinking
+from src.ad_generation.parsing import strip_thinking
 
 
 class BaseVllmGenerator:
