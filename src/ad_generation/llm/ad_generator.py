@@ -1,3 +1,4 @@
+"""vLLM-based generator for creating synthetic advertisement copy."""
 from __future__ import annotations
 
 from src.ad_generation.llm.pathutil import prepend_venv_bin_to_path
@@ -12,7 +13,7 @@ from src.ad_generation.config import (
     AD_MAX_TOKENS,
     AD_MODEL_NAME,
 )
-from src.ad_generation.prompts import AD_JSON_SCHEMA, build_ad_prompt
+from src.ad_generation.llm.prompts import AD_JSON_SCHEMA, build_ad_prompt
 
 
 class VllmAdGenerator(BaseVllmGenerator):

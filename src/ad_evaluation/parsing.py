@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.ad_generation.parsing import extract_json_value
+from src.ad_generation.llm.parsing import extract_json_value
 
 
 def parse_placement_score(raw: str) -> tuple[int, str]:

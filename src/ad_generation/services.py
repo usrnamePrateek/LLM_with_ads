@@ -1,3 +1,4 @@
+"""Service classes that orchestrate data preparation and LLM batch generation workflows."""
 from __future__ import annotations
 
 import json
@@ -20,12 +21,13 @@ from src.ad_generation.config import (
 )
 from src.ad_generation.llm.ad_generator import VllmAdGenerator
 from src.ad_generation.llm.base import TextGenerator
-from src.ad_generation.models import AdRecord, QueryCategory
-from src.ad_generation.parsing import parse_ad_creatives, parse_category
-from src.ad_generation.repository import AdJsonlRepository, DomainRepository, QueryFrameRepository
+from src.ad_generation.entities import AdRecord, QueryCategory
+from src.ad_generation.llm.parsing import parse_ad_creatives, parse_category
+from src.ad_generation.repository import AdJsonlRepository, QueryFrameRepository, TextDomainRepository
 
 
 def row_already_categorized(row: pd.Series) -> bool:
+    """Checks if a dataframe row already has valid categorizations to skip redundant processing."""
     if any(col not in row.index for col in CATEGORY_COLUMNS):
         return False
     if pd.isna(row["domain"]) or pd.isna(row["intent"]) or pd.isna(row["commercial_intent"]):
@@ -42,6 +44,7 @@ def row_already_categorized(row: pd.Series) -> bool:
 
 
 def _truncate(text: str) -> str:
+    """Truncates strings for cleaner console logging."""
     q_log = " ".join(text.split())
     if len(q_log) > QUERY_LOG_CHARS:
         return q_log[:QUERY_LOG_CHARS] + "..."
@@ -49,6 +52,7 @@ def _truncate(text: str) -> str:
 
 
 class CategorizeQueriesService:
+    """Orchestrates the batch processing of user queries to determine their domain and commercial intent via an LLM."""
     def __init__(
         self,
         generator: TextGenerator,
@@ -60,6 +64,7 @@ class CategorizeQueriesService:
         self._max_retries = max_retries
 
     def categorize_queries(self, queries: list[str]) -> list[QueryCategory | None]:
+        """Sends a batch of queries to the LLM and parses the structured responses, handling retries on parse failures."""
         if not queries:
             return []
         texts = self._generator.generate(queries)
@@ -103,6 +108,7 @@ class CategorizeQueriesService:
         batch_size: int = CATEGORY_BATCH_SIZE,
         limit: int | None = None,
     ) -> pd.DataFrame:
+        """Main execution loop that chunks queries into batches, dispatches to the LLM, and checkpoints results to disk."""
         out = frame.copy()
         if limit is not None:
             out = out.head(limit).copy()
@@ -162,9 +168,10 @@ class CategorizeQueriesService:
 
 
 class GenerateAdsService:
+    """Orchestrates the batch generation of synthetic ad creatives for a given list of domains."""
     def __init__(
         self,
-        domains: DomainRepository,
+        domains: TextDomainRepository,
         generator: VllmAdGenerator,
         writer: AdJsonlRepository,
     ) -> None:
@@ -173,6 +180,7 @@ class GenerateAdsService:
         self._writer = writer
 
     def run(self) -> list[AdRecord]:
+        """Loads domains, generates ad copy via an LLM, parses the creatives, and persists them."""
         domains = self._domains.load()
         raw_outputs = self._generator.generate_for_domains(domains)
         records: list[AdRecord] = []
@@ -198,7 +206,9 @@ class GenerateAdsService:
 
 
 class PrepareArenaDatasetService:
+    """Orchestrates the download, filtering, and normalization of the raw huggingface LMArena dataset."""
     def run(self, output_dir: Path) -> None:
+        """Downloads the dataset, applies structural transformations to flatten conversations, and saves it to Parquet."""
         load_dotenv()
         token = os.getenv("HF_TOKEN")
         if not token:

@@ -1,3 +1,4 @@
+"""Script entry point for categorizing LMSYS Chatbot Arena queries using an LLM."""
 from __future__ import annotations
 
 import argparse
@@ -44,7 +45,7 @@ def main() -> None:
         gpu_memory_utilization=args.gpu_memory_utilization,
     )
     print(
-        "Qwen/vLLM ready.",
+        "vLLM ready.",
         "model:", args.model,
         "dtype: fp16",
         "batch_size:", args.batch_size,

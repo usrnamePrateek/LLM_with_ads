@@ -1,3 +1,4 @@
+"""vLLM-based generator for categorizing user queries by domain and intent."""
 from __future__ import annotations
 
 from src.ad_generation.llm.pathutil import prepend_venv_bin_to_path
@@ -11,7 +12,7 @@ from src.ad_generation.config import (
     CATEGORY_MAX_NEW_TOKENS,
     CATEGORY_MODEL_NAME,
 )
-from src.ad_generation.prompts import CATEGORY_JSON_SCHEMA, CATEGORY_SYSTEM_PROMPT
+from src.ad_generation.llm.prompts import CATEGORY_JSON_SCHEMA, CATEGORY_SYSTEM_PROMPT
 
 
 class VllmCategoryGenerator(BaseVllmGenerator):

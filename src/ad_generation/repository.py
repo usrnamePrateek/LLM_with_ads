@@ -1,33 +1,41 @@
+"""Repository classes for loading datasets, merging checkpoints, and saving generated JSON/CSV data."""
+
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from pathlib import Path
-from typing import Protocol
 
 import pandas as pd
 
 from src.ad_generation.config import CATEGORY_COLUMNS, QUERY_COLUMN
-from src.ad_generation.models import AdRecord
+from src.ad_generation.entities import AdRecord
 
 
 class QueryFrameRepository:
+    """Repository for reading and checkpointing pandas DataFrames containing user queries."""
+
     def load(self, path: Path, query_column: str = QUERY_COLUMN) -> pd.DataFrame:
+        """Loads a Parquet or CSV file containing queries, filtering out rows with missing query data."""
         if not path.exists():
             raise FileNotFoundError(f"Input not found: {path}")
         suffix = path.suffix.lower()
         if suffix == ".parquet":
-            frame = pd.read_parquet(path)
+            df = pd.read_parquet(path)
         elif suffix == ".csv":
-            frame = pd.read_csv(path)
+            df = pd.read_csv(path)
         else:
             raise ValueError(f"Unsupported input type: {path}")
-        if query_column not in frame.columns:
+
+        if query_column not in df.columns:
             raise ValueError(f"Missing column {query_column!r} in {path}")
-        frame = frame.dropna(subset=[query_column]).copy()
-        print(f"Loaded {len(frame):,} rows from {path}")
-        return frame
+
+        df = df.dropna(subset=[query_column]).copy()
+        print(f"Loaded {len(df):,} rows from {path}")
+        return df
 
     def merge_checkpoint(self, checkpoint_path: Path, source_df: pd.DataFrame) -> pd.DataFrame:
+        """Merges previously categorized query rows from a CSV checkpoint to resume interrupted batch generation jobs."""
         if not checkpoint_path.exists():
             return source_df
 
@@ -52,17 +60,15 @@ class QueryFrameRepository:
         return out
 
     def save_csv(self, frame: pd.DataFrame, path: Path) -> None:
+        """Saves a pandas DataFrame to CSV, creating parent directories if needed."""
         path.parent.mkdir(parents=True, exist_ok=True)
         frame.to_csv(path, index=False)
         print(f"  checkpoint saved: {path}")
 
 
-class DomainRepository(Protocol):
-    def load(self) -> list[str]:
-        ...
-
 
 class TextDomainRepository:
+    """Loads a list of unique domain categories from a line-separated text file."""
     def __init__(self, path: Path) -> None:
         self._path = path
 
@@ -80,12 +86,14 @@ class TextDomainRepository:
 
 
 class AdJsonlRepository:
+    """Repository for persisting generated AdRecords as a JSONL file."""
     def __init__(self, path: Path) -> None:
         self._path = path
 
     def save(self, records: list[AdRecord]) -> None:
+        """Saves a list of AdRecords into a JSONL file, ensuring ascii-safe unicode writing."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
         with self._path.open("w", encoding="utf-8") as handle:
             for record in records:
-                handle.write(json.dumps(record.to_dict(), ensure_ascii=False) + "\n")
+                handle.write(json.dumps(asdict(record), ensure_ascii=False) + "\n")
         print(f"Saved {len(records)} ads to {self._path}")

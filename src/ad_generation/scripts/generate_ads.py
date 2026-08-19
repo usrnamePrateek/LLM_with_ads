@@ -1,3 +1,4 @@
+"""Script entry point for generating synthetic advertisements."""
 from __future__ import annotations
 
 import argparse

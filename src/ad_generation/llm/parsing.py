@@ -1,18 +1,21 @@
+"""Functions for safely parsing structured JSON outputs from LLMs."""
 from __future__ import annotations
 
 import json
 import re
 
 from src.ad_generation.config import CATEGORY_COLUMNS
-from src.ad_generation.models import AdCreative, QueryCategory
+from src.ad_generation.entities import AdCreative, QueryCategory
 
 
 def strip_thinking(text: str) -> str:
+    """Removes thinking tokens (e.g. <think>...</think>) often produced by reasoning models."""
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
 
-def extract_json_value(text: str):
-    text = (text or "").strip()
+def extract_json_value(raw: str) -> dict | list | str | int | float | bool | None:
+    """Extracts and parses a JSON payload from a markdown string (e.g., from ```json blocks)."""
+    text = strip_thinking(raw).strip()
     if not text:
         raise json.JSONDecodeError("empty response", text, 0)
     try:
@@ -25,6 +28,7 @@ def extract_json_value(text: str):
 
 
 def parse_category(raw: str) -> QueryCategory:
+    """Validates and parses a raw JSON string into a QueryCategory domain object."""
     payload = extract_json_value(raw)
     if isinstance(payload, dict) and "results" in payload and payload["results"]:
         payload = payload["results"][0]
@@ -50,6 +54,7 @@ def parse_category(raw: str) -> QueryCategory:
 
 
 def parse_ad_creatives(raw: str) -> list[AdCreative]:
+    """Validates and parses a raw JSON string into a list of AdCreative objects."""
     payload = extract_json_value(raw)
     ads = payload.get("ads") if isinstance(payload, dict) else None
     if not isinstance(ads, list) or len(ads) != 2:

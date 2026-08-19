@@ -17,7 +17,7 @@ AD_MAX_TOKENS = 1000
 AD_GPU_MEMORY_UTILIZATION = 0.95
 
 # ── Data paths shared across modules ─────────────────────────────────────────
-DEFAULT_ADS_JSONL = REPO_ROOT / "data/processed/ads/ads2.jsonl"
+DEFAULT_ADS_JSONL = REPO_ROOT / "data/processed/ads/ads.jsonl"
 DEFAULT_INDEX_DIR = REPO_ROOT / "data/processed/ads/index"
 
 DEFAULT_ARENA_OUTPUT_DIR = REPO_ROOT / "data/processed/lmarena/dataset"

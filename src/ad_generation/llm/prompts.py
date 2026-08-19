@@ -1,3 +1,4 @@
+"""LLM prompts and JSON schemas used for ad and category generation."""
 from __future__ import annotations
 
 from src.ad_generation.config import CATEGORY_COLUMNS

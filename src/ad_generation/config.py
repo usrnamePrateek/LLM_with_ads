@@ -1,3 +1,4 @@
+"""Configuration variables specific to the ad generation and data preparation module."""
 from pathlib import Path
 
 from src.common.shared_config import (

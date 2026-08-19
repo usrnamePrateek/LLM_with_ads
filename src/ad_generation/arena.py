@@ -1,9 +1,12 @@
+"""Functions for processing and normalizing the raw LMArena dataset."""
 from __future__ import annotations
 
 import random
 
 
 def add_winner_cols(row: dict) -> dict:
+    """Determines the winning model and side (a/b) from a dataset row, 
+        returning a unified conversation history."""
     winner = row["winner"]
     if winner == "model_a":
         side = "a"
@@ -24,12 +27,15 @@ def add_winner_cols(row: dict) -> dict:
 
 
 def _text_from_msg(msg: dict) -> str:
+    """Extracts raw text content from a structured message dictionary."""
     return "".join(
         part["text"] or "" for part in msg["content"] if part["type"] == "text"
     )
 
 
 def add_query_response(row: dict) -> dict:
+    """Extracts the first user query and the corresponding assistant 
+        response from a conversation history."""
     query = ""
     llm_response = ""
     for msg in row["conversation"]:

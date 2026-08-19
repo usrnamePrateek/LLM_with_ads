@@ -1,3 +1,4 @@
+"""Script entry point for downloading and cleaning the LMSYS Chatbot Arena Parquet dataset."""
 from __future__ import annotations
 
 import argparse
