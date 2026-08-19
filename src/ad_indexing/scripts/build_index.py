@@ -1,3 +1,4 @@
+"""CLI script to embed and index generated ad creatives into a FAISS vector store."""
 from __future__ import annotations
 
 import argparse

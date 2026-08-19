@@ -1,16 +1,19 @@
+"""FAISS-based implementation of the vector store for dense ad embeddings."""
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from pathlib import Path
 
 import faiss
 import numpy as np
 
 from src.ad_indexing.config import ADS_SIDECAR_FILENAME, INDEX_FILENAME
-from src.ad_indexing.models import Ad, ScoredAd
+from src.ad_indexing.entities import Ad, ScoredAd
 
 
 class FaissVectorStore:
+    """Manages an in-memory FAISS index and persists it alongside a JSON sidecar containing ad metadata."""
     def __init__(self, index_dir: Path) -> None:
         self._index_dir = index_dir
         self._index_path = index_dir / INDEX_FILENAME
@@ -23,6 +26,7 @@ class FaissVectorStore:
         self._id_to_row = {ad.id: i for i, ad in enumerate(self._ads)}
 
     def upsert(self, ids: list[str], vectors: np.ndarray, ads: list[Ad]) -> None:
+        """Rebuilds the FAISS index with new normalized vectors and ad metadata."""
         if len(ids) != len(ads) or len(ids) != len(vectors):
             raise ValueError("ids, vectors, and ads must have the same length")
         if vectors.ndim != 2:
@@ -37,6 +41,7 @@ class FaissVectorStore:
         self._rebuild_id_map()
 
     def get_vector(self, ad_id: str) -> np.ndarray:
+        """Retrieves the exact stored embedding vector for a given ad ID."""
         if self._index is None:
             raise RuntimeError("vector store is empty; build or load an index first")
         row = self._id_to_row.get(ad_id)
@@ -45,6 +50,7 @@ class FaissVectorStore:
         return np.asarray(self._index.reconstruct(row), dtype=np.float32)
 
     def query(self, vector: np.ndarray, k: int) -> list[ScoredAd]:
+        """Performs a top-k similarity search using Inner Product (Cosine Similarity on normalized vectors)."""
         if self._index is None or not self._ads:
             raise RuntimeError("vector store is empty; build or load an index first")
         if k < 1:
@@ -64,14 +70,16 @@ class FaissVectorStore:
         return results
 
     def save(self) -> None:
+        """Writes the FAISS index and JSON metadata sidecar to disk."""
         if self._index is None:
             raise RuntimeError("nothing to save")
         self._index_dir.mkdir(parents=True, exist_ok=True)
         faiss.write_index(self._index, str(self._index_path))
-        payload = [ad.to_dict() for ad in self._ads]
+        payload = [asdict(ad) for ad in self._ads]
         self._sidecar_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def load(self) -> None:
+        """Loads a previously saved FAISS index and JSON sidecar from disk into memory."""
         if not self._index_path.exists() or not self._sidecar_path.exists():
             raise FileNotFoundError(
                 f"index not found under {self._index_dir} "

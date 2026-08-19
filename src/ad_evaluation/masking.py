@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from src.ad_integration.placement import format_ad_block
+from src.ad_integration.core.placement import format_ad_block
 from src.ad_evaluation.config import AD_SLOT
 
 _AD_BLOCK_RE = re.compile(

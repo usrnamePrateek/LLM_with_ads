@@ -1,3 +1,4 @@
+"""Configuration variables for placing ads into generated LLM responses."""
 from pathlib import Path
 
 from src.common.shared_config import (

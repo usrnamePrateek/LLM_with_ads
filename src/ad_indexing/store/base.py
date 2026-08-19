@@ -4,7 +4,7 @@ from typing import Protocol
 
 import numpy as np
 
-from src.ad_indexing.models import Ad, ScoredAd
+from src.ad_indexing.entities import Ad, ScoredAd
 
 
 class VectorStore(Protocol):

@@ -1,14 +1,17 @@
+"""Repositories for loading queries and saving synthetic ad placements."""
 from __future__ import annotations
 
 from pathlib import Path
 
 import pandas as pd
+from dataclasses import asdict
 
 from src.ad_integration.config import QUERY_COLUMN
-from src.ad_integration.models import PlacedAdResponse, QueryTopAd, SemanticParagraphScore
+from src.ad_integration.entities import PlacedAdResponse, QueryTopAd, SemanticParagraphScore
 
 
 class QueryDatasetRepository:
+    """Loads the base queries from either parquet or CSV."""
     def load(self, path: Path, query_column: str = QUERY_COLUMN) -> pd.DataFrame:
         if not path.exists():
             raise FileNotFoundError(f"dataset not found: {path}")
@@ -27,14 +30,16 @@ class QueryDatasetRepository:
 
 
 class AssignmentCsvRepository:
+    """Persists the top-1 ad assignment for each query to a CSV."""
     def save(self, rows: list[QueryTopAd], path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        frame = pd.DataFrame([row.to_dict() for row in rows])
+        frame = pd.DataFrame([asdict(row) for row in rows])
         frame.to_csv(path, index=False)
         print(f"Saved {len(rows):,} rows to {path}")
 
 
 class PlacedAdCsvRepository:
+    """Loads ad assignments and saves the final response with the ad placed."""
     def save(
         self,
         rows: list[PlacedAdResponse],
@@ -45,7 +50,7 @@ class PlacedAdCsvRepository:
         if not rows:
             return
         path.parent.mkdir(parents=True, exist_ok=True)
-        frame = pd.DataFrame([row.to_dict() for row in rows])
+        frame = pd.DataFrame([asdict(row) for row in rows])
         if append and path.exists():
             frame.to_csv(path, mode="a", header=False, index=False)
         else:
@@ -65,6 +70,7 @@ class PlacedAdCsvRepository:
 
 
 class SemanticParagraphCsvRepository:
+    """Persists the detailed per-paragraph similarity scores for downstream analysis."""
     def save(
         self,
         rows: list[SemanticParagraphScore],
@@ -75,7 +81,7 @@ class SemanticParagraphCsvRepository:
         if not rows:
             return
         path.parent.mkdir(parents=True, exist_ok=True)
-        frame = pd.DataFrame([row.to_dict() for row in rows])
+        frame = pd.DataFrame([asdict(row) for row in rows])
         if append and path.exists():
             frame.to_csv(path, mode="a", header=False, index=False)
         else:

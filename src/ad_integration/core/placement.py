@@ -1,13 +1,15 @@
+"""Text manipulation functions for inserting markdown-formatted ads into LLM responses."""
 from __future__ import annotations
 
 import re
 
 from src.ad_integration.config import AD_POSITIONS
-from src.ad_integration.semantic import insert_ad_after_best_paragraph
-from src.ad_integration.splitting import join_chunks, normalize_text, split_paragraphs
+from src.ad_integration.core.semantic import insert_ad_after_best_paragraph
+from src.ad_integration.core.splitting import join_chunks, normalize_text, split_paragraphs
 
 
 def format_ad_block(headline: str, description: str, cta: str) -> str:
+    """Formats an ad into a standard markdown block for placement."""
     headline_md = normalize_text(headline).strip()
     description_md = normalize_text(description).strip()
     cta_md = normalize_text(cta).strip() or "Learn more"
@@ -55,6 +57,7 @@ def place_ad(
     chunks: list[str] | None = None,
     best_chunk_index: int | None = None,
 ) -> str:
+    """Places an ad block into the original LLM response according to the specified position strategy."""
     if position not in AD_POSITIONS:
         raise ValueError(f"unknown position {position!r}")
     if position == "first":

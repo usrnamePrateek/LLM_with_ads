@@ -1,3 +1,4 @@
+"""CLI script to map each user query to the single most semantically relevant ad from the index."""
 from __future__ import annotations
 
 import argparse

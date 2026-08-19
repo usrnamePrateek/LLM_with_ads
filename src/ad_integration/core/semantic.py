@@ -1,9 +1,10 @@
+"""Semantic matching logic for placing ads dynamically within LLM response paragraphs."""
 from __future__ import annotations
 
 import numpy as np
 
 from src.ad_indexing.embeddings.base import EmbeddingEncoder
-from src.ad_integration.splitting import join_chunks, split_paragraphs
+from src.ad_integration.core.splitting import join_chunks, split_paragraphs
 
 
 def paragraph_cosine_scores(
@@ -11,6 +12,7 @@ def paragraph_cosine_scores(
     paragraphs: list[str],
     encoder: EmbeddingEncoder,
 ) -> np.ndarray:
+    """Calculates cosine similarity scores between an ad vector and a list of paragraphs."""
     if not paragraphs:
         return np.zeros((0,), dtype=np.float32)
     para_vecs = encoder.encode_documents(paragraphs)

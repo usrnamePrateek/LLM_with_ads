@@ -1,22 +1,18 @@
+"""Repositories for loading and parsing synthetic advertisements from disk."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Protocol
 
-from src.ad_indexing.models import Ad
-
-
-class AdRepository(Protocol):
-    def load(self) -> list[Ad]:
-        ...
-
+from src.ad_indexing.entities import Ad
 
 class JsonlAdRepository:
+    """Loads and validates ad copy from a JSONL file into Ad entities."""
     def __init__(self, path: Path) -> None:
         self._path = path
 
     def load(self) -> list[Ad]:
+        """Reads the JSONL file line-by-line, parsing each line into an Ad object and ensuring unique IDs."""
         if not self._path.exists():
             raise FileNotFoundError(f"ads jsonl not found: {self._path}")
 

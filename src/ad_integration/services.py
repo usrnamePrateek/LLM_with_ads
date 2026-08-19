@@ -1,3 +1,4 @@
+"""Service classes orchestrating query matching and ad insertion."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,18 +15,19 @@ from src.ad_integration.config import (
     QUERY_COLUMN,
     TOP_K,
 )
-from src.ad_integration.models import PlacedAdResponse, QueryTopAd, SemanticParagraphScore
-from src.ad_integration.placement import format_ad_block, place_ad
+from src.ad_integration.entities import PlacedAdResponse, QueryTopAd, SemanticParagraphScore
+from src.ad_integration.core.placement import format_ad_block, place_ad
 from src.ad_integration.repository import (
     AssignmentCsvRepository,
     PlacedAdCsvRepository,
     QueryDatasetRepository,
     SemanticParagraphCsvRepository,
 )
-from src.ad_integration.semantic import score_chunks
+from src.ad_integration.core.semantic import score_chunks
 
 
 class AssignTopAdService:
+    """Service to map queries to the single most relevant ad using the vector store."""
     def __init__(
         self,
         queries: QueryDatasetRepository,
@@ -66,7 +68,7 @@ class AssignTopAdService:
             ad = hit.ad
             assignments.append(
                 QueryTopAd(
-                    query_id=query_id,
+                    id=query_id,
                     query=query,
                     ad_id=ad.id,
                     ad_domain=ad.domain,
@@ -84,6 +86,7 @@ class AssignTopAdService:
 
 
 class PlaceAdsInResponsesService:
+    """Service to parse LLM responses and physically insert formatted ad blocks."""
     def __init__(
         self,
         queries: QueryDatasetRepository,
@@ -151,7 +154,7 @@ class PlaceAdsInResponsesService:
             for idx, (paragraph, cosine) in enumerate(zip(paragraphs, scores)):
                 semantic_buffer.append(
                     SemanticParagraphScore(
-                        query_id=query_id,
+                        id=query_id,
                         query=query,
                         ad_id=ad_id,
                         paragraph_index=idx,
@@ -163,7 +166,7 @@ class PlaceAdsInResponsesService:
                 )
             for position in AD_POSITIONS:
                 row_out = PlacedAdResponse(
-                    query_id=query_id,
+                    id=query_id,
                     query=query,
                     ad_id=ad_id,
                     position=position,

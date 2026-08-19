@@ -1,3 +1,4 @@
+"""Configuration variables specific to the ad indexing and retrieval module."""
 from src.common.shared_config import DEFAULT_ADS_JSONL, DEFAULT_INDEX_DIR, REPO_ROOT
 
 EMBEDDING_MODEL_NAME = "BAAI/bge-m3"

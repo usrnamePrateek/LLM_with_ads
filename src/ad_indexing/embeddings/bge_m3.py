@@ -1,3 +1,4 @@
+"""HuggingFace SentenceTransformers wrapper for the BAAI/bge-m3 embedding model."""
 from __future__ import annotations
 
 import numpy as np
@@ -8,6 +9,7 @@ from src.ad_indexing.config import EMBEDDING_MODEL_NAME, ENCODE_BATCH_SIZE
 
 
 class BgeM3Encoder:
+    """Encodes text into dense vector representations using BGE-M3."""
     def __init__(
         self,
         model_name: str = EMBEDDING_MODEL_NAME,
@@ -24,9 +26,11 @@ class BgeM3Encoder:
         return self._dimension
 
     def encode_documents(self, texts: list[str]) -> np.ndarray:
+        """Encodes ad text for indexing."""
         return self._encode(texts)
 
     def encode_queries(self, texts: list[str]) -> np.ndarray:
+        """Encodes user queries for searching."""
         return self._encode(texts)
 
     def _encode(self, texts: list[str]) -> np.ndarray:

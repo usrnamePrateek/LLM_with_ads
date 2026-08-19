@@ -1,3 +1,4 @@
+"""Text splitting utilities for segmenting LLM responses into paragraphs or sentences."""
 from __future__ import annotations
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -6,6 +7,7 @@ from src.ad_integration.config import CHUNK_OVERLAP, CHUNK_SIZE
 
 
 def normalize_text(text: str) -> str:
+    """Normalizes whitespace and newline characters in a string."""
     body = text or ""
     if "\\n" in body:
         body = body.replace("\\n", "\n")
@@ -23,6 +25,7 @@ _SENTENCE_SPLITTER = RecursiveCharacterTextSplitter(
 
 
 def split_paragraphs(text: str) -> list[str]:
+    """Splits a body of text into logical paragraphs using LangChain's RecursiveCharacterTextSplitter."""
     body = normalize_text(text).strip()
     if not body:
         return []

@@ -1,3 +1,4 @@
+"""CLI script to test the vector index by performing a semantic search."""
 from __future__ import annotations
 
 import argparse

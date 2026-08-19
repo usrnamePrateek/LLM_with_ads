@@ -1,3 +1,4 @@
+"""CLI script to synthetically place matched ads into LLM responses using multiple strategies."""
 from __future__ import annotations
 
 import argparse
