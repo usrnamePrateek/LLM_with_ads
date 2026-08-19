@@ -1,14 +1,14 @@
 from pathlib import Path
 
-from ad_retrieval.config import DEFAULT_INDEX_DIR
-from lmarena_prep.config import DEFAULT_QUERIES_INPUT
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from shared_config import (
+    DEFAULT_INDEX_DIR,
+    DEFAULT_OUTPUT_CSV,
+    DEFAULT_PLACED_ADS_CSV,
+    DEFAULT_QUERIES_INPUT,
+    REPO_ROOT,
+)
 
 DEFAULT_QUERIES_PARQUET = DEFAULT_QUERIES_INPUT
-DEFAULT_INDEX_DIR = DEFAULT_INDEX_DIR
-DEFAULT_OUTPUT_CSV = REPO_ROOT / "data/processed/generation/query_top1_ads.csv"
-DEFAULT_PLACED_ADS_CSV = REPO_ROOT / "data/processed/generation/query_ad_positions.csv"
 DEFAULT_SEMANTIC_PARAS_CSV = (
     REPO_ROOT / "data/processed/generation/query_semantic_paragraphs.csv"
 )
@@ -20,3 +20,4 @@ TOP_K = 1
 ENCODE_BATCH_SIZE = 32
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 0
+
