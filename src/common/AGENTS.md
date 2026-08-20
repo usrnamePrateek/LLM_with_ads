@@ -1,23 +1,16 @@
-# Agent Instructions: `common` Module
+# `common` Module
 
-## Purpose
-This module serves as the shared infrastructure layer for the entire project. It contains global configuration constants and base classes that are shared across multiple high-level modules.
+Shared infrastructure layer. Must not contain business logic.
 
-## Responsibilities
-- Provide centralized configuration variables (e.g., file paths, global model names, batch sizes).
-- Provide foundational classes used by other modules (e.g., `BaseVllmGenerator`).
-- **Do not** put application-specific business logic here.
+## Dependency Warning
 
-## Dependencies
-- **Forbidden**: This module is the foundation of the repository. It **MUST NOT** import from `src.ad_indexing`, `src.ad_integration`, `src.ad_generation`, or `src.ad_evaluation`. Doing so will create circular import errors and violate the architectural hierarchy.
+`shared_llm.py` imports `strip_thinking` from `src.ad_generation.llm.parsing`. This is the only cross-module import in `common`. Do not add more — it should ideally be refactored into `common` itself.
 
-## Important Interfaces
-- `shared_config.py`: Single source of truth for global configuration.
-- `shared_llm.py`: Contains `BaseVllmGenerator`, which manages `vLLM` instantiation, memory constraints, chat template logic, and token truncation.
+## `BaseVllmGenerator`
 
-## Design Rules
-- Keep this module as thin and minimal as possible.
-- If a utility function or configuration is only used by one module, it belongs in that module's `config.py` or `utils.py`, not here.
+All LLM generators inherit from this class. It handles:
+- vLLM instantiation and GPU memory config
+- Chat template application with `enable_thinking=False` fallback
+- Token truncation: trims user content to fit `max_model_len - max_new_tokens`
 
-## Testing
-- Ensure that modifications to `BaseVllmGenerator` do not break the token truncation logic for any of the inherited classes. Tests for this module should focus purely on text truncation and tokenization behavior.
+Changes to truncation logic affect every generator in the project (`VllmCategoryGenerator`, `VllmAdGenerator`, `VllmPlacementJudge`).

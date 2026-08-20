@@ -53,7 +53,7 @@ This document outlines the architecture, data flows, and module responsibilities
 - **Important Classes/Modules**:
   - `VllmPlacementJudge`: Prompts the model with a strict JSON schema for scoring. 
   - `masking.py` (`mask_ad_in_response()`): Replaces the specific ad markdown block with an `[ad slot]` placeholder to prevent the judge from being biased by the ad content itself (focusing strictly on the structural/contextual *placement*).
-  - `services.py` (`PlacementTestingService`): Manages the checkpointing logic. It reads existing outputs to skip already-scored rows, preventing data loss on process interruption.
+  - `services.py` (`ScorePlacementsService`): Manages the checkpointing logic. It reads existing outputs to skip already-scored rows, preventing data loss on process interruption.
 
 ## Important Architectural Conventions
 - **Repository Pattern**: CSV and FAISS storage logic are isolated behind simple repository/store classes (e.g., `PlacementScoreCsvRepository`, `FaissStore`).

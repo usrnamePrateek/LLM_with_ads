@@ -1,22 +1,24 @@
 # LLM Ad Placement Testing
 
-## Project Purpose
-This project provides a robust data pipeline and evaluation framework for testing the placement of advertisements within LLM-generated text responses. It simulates an advertising engine by matching synthetic ads to user queries from the LMSYS Chatbot Arena dataset, injecting them into responses, and using a strong LLM as a judge to evaluate the naturalness and quality of the placement.
+## Pipeline
 
-## High-Level Architecture
-The project follows a modular, sequential pipeline:
-1. **`src/ad_generation`**: Data extraction and ad generation.
-2. **`src/ad_indexing`**: Semantic indexing of ads using FAISS and BGE-M3.
-3. **`src/ad_integration`**: Matching queries to ads and placing them in text via multiple strategies.
-4. **`src/ad_evaluation`**: LLM-as-a-judge evaluation of ad placements.
-5. **`src/common`**: Shared configuration and centralized `vLLM` generator classes.
+Sequential modules connected via filesystem (CSV/JSONL/Parquet):
 
-## Important Development Constraints
-- Use the virtual environment `.lmarena-env` for dependencies.
-- The project requires GPU access for vLLM (fp16, fp8) and sentence-transformers inference.
-- Shared configurations are maintained centrally in `src/common/shared_config.py`.
-- Shared LLM behaviors (token truncation, chat formatting) are maintained in `src/common/shared_llm.py`.
+1. **`src/ad_generation`** → Extract Arena dataset, categorize queries, generate synthetic ads.
+2. **`src/ad_indexing`** → Embed ads with BGE-M3, build FAISS index.
+3. **`src/ad_integration`** → Match queries to ads, inject ad blocks into LLM responses.
+4. **`src/ad_evaluation`** → LLM-as-a-judge scores placement quality (1–5).
+5. **`src/common`** → Shared config (`shared_config.py`) and vLLM base class (`shared_llm.py`).
 
-## Documentation and Rules
-- **Detailed Architecture**: Consult `docs/architecture.md` before making cross-module architectural changes.
-- **Engineering Rules**: Consult `.agents/rules/python.md` for Python coding standards, SOLID application, and design pattern guidelines.
+## Development
+
+- Virtual environment: `.lmarena-env`
+- GPU required for vLLM and sentence-transformers inference.
+- Consult `docs/architecture.md` for detailed data flow and module responsibilities.
+- Consult `.agents/rules/python.md` for coding standards.
+
+## Key Conventions
+
+- **Checkpointing**: Long-running LLM batch scripts write incrementally (append mode) and skip already-processed IDs on restart.
+- **Entity serialization**: Use `dataclasses.asdict()` for CSV/JSONL output. No custom `to_dict()` methods.
+- **Config independence**: Each module's `config.py` should define values directly, not derive them from other config keys.
