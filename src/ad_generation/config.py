@@ -1,6 +1,5 @@
 """Configuration variables specific to the ad generation and data preparation module."""
 from pathlib import Path
-
 from src.common.shared_config import (
     AD_GPU_MEMORY_UTILIZATION,
     AD_MAX_MODEL_LEN,
@@ -13,7 +12,6 @@ from src.common.shared_config import (
     DEFAULT_QUERIES_INPUT,
     REPO_ROOT,
 )
-
 DEFAULT_CATEGORIES_OUTPUT = REPO_ROOT / "data/processed/lmarena/lmarena_query_qwen3_categories.csv"
 DEFAULT_DOMAINS_TXT = REPO_ROOT / "data/processed/lmarena/domains.txt"
 

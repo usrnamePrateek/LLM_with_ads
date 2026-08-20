@@ -9,7 +9,7 @@ from src.common.shared_config import (
     REPO_ROOT,
 )
 
-DEFAULT_QUERIES_PARQUET = DEFAULT_QUERIES_INPUT
+DEFAULT_QUERIES_PARQUET = REPO_ROOT / "data/processed/lmarena/dataset/arena_preference_en_single_turn.parquet"
 DEFAULT_SEMANTIC_PARAS_CSV = (
     REPO_ROOT / "data/processed/generation/query_semantic_paragraphs.csv"
 )

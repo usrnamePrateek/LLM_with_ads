@@ -21,7 +21,7 @@ DEFAULT_ADS_JSONL = REPO_ROOT / "data/processed/ads/ads.jsonl"
 DEFAULT_INDEX_DIR = REPO_ROOT / "data/processed/ads/index"
 
 DEFAULT_ARENA_OUTPUT_DIR = REPO_ROOT / "data/processed/lmarena/dataset"
-DEFAULT_QUERIES_INPUT = DEFAULT_ARENA_OUTPUT_DIR / "arena_preference_en_single_turn.parquet"
+DEFAULT_QUERIES_INPUT = REPO_ROOT / "data/processed/lmarena/dataset/arena_preference_en_single_turn.parquet"
 
 DEFAULT_OUTPUT_CSV = REPO_ROOT / "data/processed/generation/query_top1_ads.csv"
 DEFAULT_PLACED_ADS_CSV = REPO_ROOT / "data/processed/generation/query_ad_positions.csv"
