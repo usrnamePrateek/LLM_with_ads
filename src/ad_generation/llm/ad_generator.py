@@ -14,6 +14,7 @@ from src.ad_generation.config import (
     AD_MODEL_NAME,
 )
 from src.ad_generation.llm.prompts import AD_JSON_SCHEMA, build_ad_prompt
+from src.ad_generation.llm.prompts import BULK_AD_JSON_SCHEMA, build_bulk_ad_prompt
 
 
 class VllmAdGenerator(BaseVllmGenerator):
@@ -36,4 +37,26 @@ class VllmAdGenerator(BaseVllmGenerator):
 
     def generate_for_domains(self, domains: list[str]) -> list[str]:
         prompts = [build_ad_prompt(domain) for domain in domains]
+        return self.generate(prompts)
+
+class VllmBulkAdGenerator(BaseVllmGenerator):
+    def __init__(
+        self,
+        model_name: str = AD_MODEL_NAME,
+        max_model_len: int = AD_MAX_MODEL_LEN,
+        gpu_memory_utilization: float = AD_GPU_MEMORY_UTILIZATION,
+    ) -> None:
+        super().__init__(
+            model_name=model_name,
+            max_model_len=max_model_len,
+            max_new_tokens=AD_MAX_TOKENS,
+            gpu_memory_utilization=gpu_memory_utilization,
+            json_schema=BULK_AD_JSON_SCHEMA,
+            temperature=0.7,
+            top_p=0.8,
+            top_k=20,
+        )
+
+    def generate_for_domain_counts(self, domain_counts: list[tuple[str, int]]) -> list[str]:
+        prompts = [build_bulk_ad_prompt(domain, count) for domain, count in domain_counts]
         return self.generate(prompts)

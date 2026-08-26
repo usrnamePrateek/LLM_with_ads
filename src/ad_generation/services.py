@@ -250,3 +250,75 @@ class PrepareArenaDatasetService:
         print(f"Saved {len(train):,} rows")
         print(f"  parquet: {parquet_path}")
         print(f"  hf disk: {hf_dir}")
+
+class GenerateBulkAdsService:
+    """Orchestrates the batch generation of synthetic ad creatives for domains in bulk chunks."""
+    def __init__(
+        self,
+        domains: 'src.ad_generation.repository.CsvTaxonomyRepository',
+        generator: 'src.ad_generation.llm.ad_generator.VllmBulkAdGenerator',
+        writer: AdJsonlRepository,
+    ) -> None:
+        self._domains = domains
+        self._generator = generator
+        self._writer = writer
+
+    def run(self) -> list[AdRecord]:
+        from src.ad_generation.config import MAX_ADS_PER_PROMPT
+        from src.ad_generation.llm.parsing import parse_bulk_ad_creatives
+        from collections import defaultdict
+        
+        domain_counts = self._domains.load_domain_counts()
+        existing_counts = self._writer.get_existing_counts()
+        
+        # Chunk the requests
+        chunked_requests = []
+        for domain, target_count in domain_counts:
+            already_generated = existing_counts.get(domain, 0)
+            remaining = target_count - already_generated
+            if remaining <= 0:
+                continue
+            
+            while remaining > 0:
+                chunk = min(remaining, MAX_ADS_PER_PROMPT)
+                chunked_requests.append((domain, chunk))
+                remaining -= chunk
+                
+        print(f"Total remaining chunks to generate: {len(chunked_requests)}")
+        
+        ad_id_counter = defaultdict(int, existing_counts)
+        all_records = []
+        
+        batch_size = 50
+        for i in range(0, len(chunked_requests), batch_size):
+            batch = chunked_requests[i:i + batch_size]
+            print(f"Processing chunk batch {i+1} to {min(i+batch_size, len(chunked_requests))}...")
+            
+            raw_outputs = self._generator.generate_for_domain_counts(batch)
+            batch_records = []
+            
+            for (domain, _), text in zip(batch, raw_outputs):
+                try:
+                    creatives = parse_bulk_ad_creatives(text)
+                except Exception as exc:
+                    print(f"Failed for {domain}: {exc}")
+                    print(f"Raw output: {text}")
+                    continue
+                
+                for creative in creatives:
+                    ad_id_counter[domain] += 1
+                    batch_records.append(
+                        AdRecord(
+                            domain=domain,
+                            ad_id=ad_id_counter[domain],
+                            headline=creative.headline,
+                            description=creative.description,
+                            cta=creative.cta,
+                        )
+                    )
+                    
+            if batch_records:
+                self._writer.append(batch_records)
+                all_records.extend(batch_records)
+                
+        return all_records

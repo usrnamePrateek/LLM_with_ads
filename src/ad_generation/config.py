@@ -14,6 +14,8 @@ from src.common.shared_config import (
 )
 DEFAULT_CATEGORIES_OUTPUT = REPO_ROOT / "data/processed/lmarena/lmarena_query_qwen3_categories.csv"
 DEFAULT_DOMAINS_TXT = REPO_ROOT / "data/processed/lmarena/domains.txt"
+TAXONOMY_CSV_PATH = REPO_ROOT / "data/processed/lmarena/taxonomy_subtopics.csv"
+MAX_ADS_PER_PROMPT = 5
 
 QUERY_COLUMN = "query"
 CATEGORY_COLUMNS = ["domain", "intent", "commercial_intent"]
