@@ -133,7 +133,7 @@ class CsvTaxonomyRepository:
         self._path = path
         self._target_ads = target_ads_per_topic
 
-    def load_domain_counts(self) -> list[tuple[str, int]]:
+    def load_domain_counts(self) -> list[tuple[str, int, str, str]]:
         if not self._path.exists():
             raise FileNotFoundError(f"Taxonomy CSV not found: {self._path}")
         
@@ -159,6 +159,6 @@ class CsvTaxonomyRepository:
                 
                 domain_str = f"{topic} / {subtopic}"
                 if count > 0:
-                    results.append((domain_str, count))
+                    results.append((domain_str, count, topic, subtopic))
                 
         return results

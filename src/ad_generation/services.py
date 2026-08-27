@@ -273,7 +273,7 @@ class GenerateBulkAdsService:
         
         # Chunk the requests
         chunked_requests = []
-        for domain, target_count in domain_counts:
+        for domain, target_count, topic, subtopic in domain_counts:
             already_generated = existing_counts.get(domain, 0)
             remaining = target_count - already_generated
             if remaining <= 0:
@@ -281,7 +281,7 @@ class GenerateBulkAdsService:
             
             while remaining > 0:
                 chunk = min(remaining, MAX_ADS_PER_PROMPT)
-                chunked_requests.append((domain, chunk))
+                chunked_requests.append((domain, chunk, topic, subtopic))
                 remaining -= chunk
                 
         print(f"Total remaining chunks to generate: {len(chunked_requests)}")
@@ -294,10 +294,12 @@ class GenerateBulkAdsService:
             batch = chunked_requests[i:i + batch_size]
             print(f"Processing chunk batch {i+1} to {min(i+batch_size, len(chunked_requests))}...")
             
-            raw_outputs = self._generator.generate_for_domain_counts(batch)
+            raw_outputs = self._generator.generate_for_domain_counts(
+                [(req[0], req[1]) for req in batch]
+            )
             batch_records = []
             
-            for (domain, _), text in zip(batch, raw_outputs):
+            for (domain, _, topic, subtopic), text in zip(batch, raw_outputs):
                 try:
                     creatives = parse_bulk_ad_creatives(text)
                 except Exception as exc:
@@ -314,6 +316,8 @@ class GenerateBulkAdsService:
                             headline=creative.headline,
                             description=creative.description,
                             cta=creative.cta,
+                            category=topic,
+                            subtopic=subtopic,
                         )
                     )
                     

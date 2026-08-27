@@ -28,3 +28,5 @@ class AdRecord:
     headline: str
     description: str
     cta: str
+    category: str | None = None
+    subtopic: str | None = None
