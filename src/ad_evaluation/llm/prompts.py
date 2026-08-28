@@ -50,6 +50,32 @@ Return ONLY valid JSON in the following format:
 Evaluate the suitability of inserting this advertisement at this position.
 """
 
+PREFERENCE_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "winner_ad": {"type": "string", "enum": ["ad_1", "ad_2"]},
+        "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+    },
+    "required": ["winner_ad", "confidence"],
+    "additionalProperties": False,
+}
+
+PREFERENCE_SYSTEM_PROMPT = """You are a digital marketing expert evaluating the relevance of advertisements for a specific user query.
+
+Your task is to review two advertisements (Ad 1 and Ad 2) and determine which one is more relevant, useful, and appropriate for a given user query.
+
+Consider:
+1. Keyword and intent alignment with the query.
+2. Value proposition clarity.
+3. Call-to-action relevance.
+
+You must output ONLY valid JSON in the following format:
+{
+  "winner_ad": "ad_1" or "ad_2",
+  "confidence": "low", "medium", or "high"
+}
+"""
+
 
 def build_user_prompt(query: str, masked_response: str, ad_text: str) -> str:
     """Formats the user query, the masked LLM response, and the ad text for evaluation."""
@@ -57,4 +83,13 @@ def build_user_prompt(query: str, masked_response: str, ad_text: str) -> str:
         f"Query: {query}\n\n"
         f"Response with ad slot:\n{masked_response}\n\n"
         f"ad:\n{ad_text}"
+    )
+
+
+def build_pairwise_preference_prompt(query: str, ad_1_text: str, ad_2_text: str) -> str:
+    """Formats the user query and two ads for preference comparison."""
+    return (
+        f"Query: {query}\n\n"
+        f"--- Ad 1 ---\n{ad_1_text}\n\n"
+        f"--- Ad 2 ---\n{ad_2_text}\n"
     )
