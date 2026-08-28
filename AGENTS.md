@@ -7,7 +7,7 @@ Sequential modules connected via filesystem (CSV/JSONL/Parquet):
 1. **`src/ad_generation`** → Extract Arena dataset, categorize queries, generate synthetic ads.
 2. **`src/ad_indexing`** → Embed ads with BGE-M3, build FAISS index.
 3. **`src/ad_integration`** → Match queries to ads, inject ad blocks into LLM responses.
-4. **`src/ad_evaluation`** → LLM-as-a-judge scores placement quality (1–5).
+4. **`src/ad_evaluation`** → LLM-as-a-judge scores placement quality (1–5) and evaluates pairwise ad preference.
 5. **`src/common`** → Shared config (`shared_config.py`) and vLLM base class (`shared_llm.py`).
 
 ## Development

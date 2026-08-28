@@ -9,3 +9,7 @@ New vector store implementations (e.g. Pinecone, Milvus) must implement the `Vec
 ## Embedding Model
 
 Uses `BAAI/bge-m3` via `sentence-transformers`. The embedder must be instantiated once and reused — loading the model is expensive (~10s + GPU memory).
+
+## Entities
+
+The `Ad` entity parses the `category` field from JSONL to enable categorical grouping in downstream modules (e.g., ad_evaluation).
