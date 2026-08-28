@@ -9,3 +9,7 @@ LLM parsing (`llm/parsing.py`) must handle malformed JSON gracefully. A single r
 ## Checkpointing
 
 Category generation processes tens of thousands of rows. The script appends results incrementally and skips already-processed IDs on restart.
+
+## Category Field
+
+The module generates ad category and subtopic information which is directly used by the `ad_evaluation` module to group similar ads for pairwise preference comparisons.

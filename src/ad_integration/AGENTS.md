@@ -13,3 +13,7 @@ Matches queries to the most relevant ad via FAISS, then injects a markdown ad bl
 ## Edge Case Handling
 
 LLM responses can be empty, lack punctuation, or contain escaped whitespace (`\\n`, `\\t`). Splitting and injection logic must handle these gracefully without raising exceptions.
+
+## Ad Assignments for Evaluation
+
+The `AssignTopAdService` outputs a CSV of `(query, selected_ad)`. This assignment file is later consumed by the `ad_evaluation` module to perform pairwise preference testing against other ads in the same category.
