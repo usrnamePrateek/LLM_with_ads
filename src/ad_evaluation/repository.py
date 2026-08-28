@@ -6,7 +6,7 @@ from dataclasses import asdict
 
 import pandas as pd
 
-from src.ad_evaluation.entities import PlacementScore
+from src.ad_evaluation.entities import PlacementScore, PairwisePreferenceScore
 
 
 class PlacementInputRepository:
@@ -50,3 +50,23 @@ class PlacementScoreCsvRepository:
         else:
             frame.to_csv(path, index=False)
         print(f"Saved {len(rows):,} scores to {path}")
+
+
+class PreferenceScoreCsvRepository:
+    """Saves the output of the LLM pairwise preference judge to a CSV file."""
+    def save(
+        self,
+        rows: list[PairwisePreferenceScore],
+        path: Path,
+        *,
+        append: bool = False,
+    ) -> None:
+        if not rows:
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        frame = pd.DataFrame([asdict(row) for row in rows])
+        if append and path.exists():
+            frame.to_csv(path, mode="a", header=False, index=False)
+        else:
+            frame.to_csv(path, index=False)
+        print(f"Saved {len(rows):,} preference scores to {path}")

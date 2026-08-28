@@ -24,6 +24,7 @@ class Ad:
     description: str
     cta: str
     embed_text: str
+    category: str | None = None
 
     @classmethod
     def from_record(cls, record: dict) -> Ad:
@@ -33,6 +34,9 @@ class Ad:
         headline = str(record["headline"]).strip()
         description = str(record["description"]).strip()
         cta = str(record.get("cta") or "").strip()
+        category_raw = record.get("category")
+        category = str(category_raw).strip() if category_raw is not None and str(category_raw).lower() != "nan" else None
+
         if not domain or not headline or not description:
             raise ValueError("ad record missing domain, headline, or description")
         return cls(
@@ -43,6 +47,7 @@ class Ad:
             description=description,
             cta=cta,
             embed_text=make_embed_text(headline, description),
+            category=category,
         )
 
 

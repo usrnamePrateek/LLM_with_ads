@@ -107,4 +107,138 @@ class ScorePlacementsService:
                 wrote_any = True
                 all_rows.extend(buffer)
                 buffer = []
+        if buffer:
+            self._writer.save(buffer, output_path, append=wrote_any)
+            all_rows.extend(buffer)
+        return all_rows
+
+
+class EvaluateAdPreferenceService:
+    """Coordinates batch generation of pairwise preference comparisons."""
+    def __init__(
+        self,
+        writer: 'src.ad_evaluation.repository.PreferenceScoreCsvRepository',
+        judge: 'src.ad_evaluation.llm.preference_judge.VllmPreferenceJudge',
+    ) -> None:
+        self._writer = writer
+        self._judge = judge
+
+    def run(
+        self,
+        assignments_path: Path,
+        ads_path: Path,
+        output_path: Path,
+        limit: int | None = None,
+        batch_size: int = 100,
+    ) -> list['src.ad_evaluation.entities.PairwisePreferenceScore']:
+        from src.ad_indexing.repository import JsonlAdRepository
+        from src.ad_evaluation.entities import PairwisePreferenceScore
+        from src.ad_evaluation.llm.prompts import build_pairwise_preference_prompt
+        from src.ad_evaluation.llm.parsing import parse_pairwise_preference
+        from collections import defaultdict
+
+        # Load assignments
+        assignments = pd.read_csv(assignments_path)
+        if limit is not None:
+            assignments = assignments.head(limit).copy()
+
+        # Load ads to find category matches
+        repo = JsonlAdRepository(ads_path)
+        all_ads = repo.load()
+        
+        ads_by_id = {ad.id: ad for ad in all_ads}
+        ads_by_category = defaultdict(list)
+        for ad in all_ads:
+            if ad.category:
+                ads_by_category[ad.category].append(ad)
+
+        wrote_any = False
+        scored_keys = set()
+        if output_path.exists():
+            existing = pd.read_csv(output_path, dtype=str)
+            if "query_id" in existing.columns and "ad_1_id" in existing.columns and "ad_2_id" in existing.columns and "is_swapped" in existing.columns:
+                scored_keys = set(
+                    zip(existing["query_id"], existing["ad_1_id"], existing["ad_2_id"], existing["is_swapped"])
+                )
+                wrote_any = True
+                print(f"Resuming: {len(scored_keys):,} pairs already scored.")
+
+        # Build testing pairs
+        pairs_to_test = []
+        for _, row in assignments.iterrows():
+            query_id = str(row["id"])
+            query = str(row["query"])
+            selected_ad_id = str(row["ad_id"])
+            
+            selected_ad = ads_by_id.get(selected_ad_id)
+            if not selected_ad or not selected_ad.category:
+                continue
+                
+            same_category_ads = ads_by_category[selected_ad.category]
+            for other_ad in same_category_ads:
+                if other_ad.id == selected_ad_id:
+                    continue
+                
+                # Forward pair
+                fwd_key = (query_id, selected_ad_id, other_ad.id, "False")
+                if fwd_key not in scored_keys:
+                    pairs_to_test.append({
+                        "query_id": query_id,
+                        "query": query,
+                        "ad_1": selected_ad,
+                        "ad_2": other_ad,
+                        "is_swapped": False
+                    })
+                    
+                # Swapped pair
+                rev_key = (query_id, other_ad.id, selected_ad_id, "True")
+                if rev_key not in scored_keys:
+                    pairs_to_test.append({
+                        "query_id": query_id,
+                        "query": query,
+                        "ad_1": other_ad,
+                        "ad_2": selected_ad,
+                        "is_swapped": True
+                    })
+
+        print(f"Total preference pairs to score: {len(pairs_to_test):,}")
+
+        all_rows = []
+        buffer = []
+        for start in range(0, len(pairs_to_test), batch_size):
+            batch = pairs_to_test[start:start + batch_size]
+            prompts = []
+            for item in batch:
+                ad_1, ad_2 = item["ad_1"], item["ad_2"]
+                prompts.append(build_pairwise_preference_prompt(item["query"], ad_1.embed_text, ad_2.embed_text))
+                
+            raw_texts = self._judge.generate(prompts)
+            for item, raw in zip(batch, raw_texts):
+                try:
+                    winner_tag, confidence = parse_pairwise_preference(raw)
+                    winner_ad_id = item["ad_1"].id if winner_tag == "ad_1" else item["ad_2"].id
+                except Exception as exc:
+                    print(f"  parse fail query_id={item['query_id']!r}: {exc}")
+                    winner_ad_id = "ERROR"
+                    confidence = f"parse_error: {exc}"
+                    
+                score = PairwisePreferenceScore(
+                    query_id=item["query_id"],
+                    query=item["query"],
+                    ad_1_id=item["ad_1"].id,
+                    ad_2_id=item["ad_2"].id,
+                    winner_ad_id=winner_ad_id,
+                    confidence=confidence,
+                    is_swapped=item["is_swapped"],
+                )
+                buffer.append(score)
+                
+            done = min(start + batch_size, len(pairs_to_test))
+            print(f"  scored {done:,}/{len(pairs_to_test):,}")
+            if len(buffer) >= 1000 or done == len(pairs_to_test):
+                self._writer.save(buffer, output_path, append=wrote_any)
+                wrote_any = True
+                all_rows.extend(buffer)
+                buffer = []
+                
         return all_rows
