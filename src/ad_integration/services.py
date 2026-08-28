@@ -49,25 +49,54 @@ class AssignTopAdService:
         limit: int | None = None,
     ) -> list[QueryTopAd]:
         frame = self._queries.load(input_path, query_column=query_column)
+        
+        # Checkpointing: skip already processed queries
+        processed_ids = set()
+        wrote_something = False
+        if output_path.exists():
+            try:
+                existing = pd.read_csv(output_path)
+                if ID_COLUMN in existing.columns:
+                    processed_ids = set(existing[ID_COLUMN].astype(str))
+                    wrote_something = True
+                    print(f"Found existing output with {len(processed_ids):,} processed IDs.")
+            except Exception as e:
+                print(f"Warning: could not read existing output for checkpointing: {e}")
+
+        if ID_COLUMN in frame.columns:
+            frame[ID_COLUMN] = frame[ID_COLUMN].astype(str)
+        else:
+            frame[ID_COLUMN] = ""
+
+        if processed_ids:
+            frame = frame[~frame[ID_COLUMN].isin(processed_ids)]
+
         if limit is not None:
             frame = frame.head(limit).copy()
 
-        texts = frame[query_column].astype(str).tolist()
-        print(f"Embedding {len(texts):,} queries ...")
-        vectors = self._encoder.encode_queries(texts)
-
+        total_remaining = len(frame)
+        print(f"Remaining queries to process: {total_remaining:,}")
+        
+        chunk_size = 1000
         assignments: list[QueryTopAd] = []
-        for i, (_, row) in enumerate(frame.iterrows()):
-            query = texts[i]
-            query_id = "" if ID_COLUMN not in row.index or pd.isna(row[ID_COLUMN]) else str(row[ID_COLUMN])
-            hits = self._store.query(vectors[i], k)
-            if not hits:
-                print(f"  no ad for query id={query_id!r}")
-                continue
-            hit = hits[0]
-            ad = hit.ad
-            assignments.append(
-                QueryTopAd(
+        
+        for chunk_start in range(0, total_remaining, chunk_size):
+            chunk = frame.iloc[chunk_start:chunk_start + chunk_size]
+            texts = chunk[query_column].astype(str).tolist()
+            
+            vectors = self._encoder.encode_queries(texts)
+            
+            chunk_assignments: list[QueryTopAd] = []
+            for i, (_, row) in enumerate(chunk.iterrows()):
+                query = texts[i]
+                query_id = row[ID_COLUMN]
+                hits = self._store.query(vectors[i], k)
+                if not hits:
+                    print(f"  no ad for query id={query_id!r}")
+                    continue
+                hit = hits[0]
+                ad = hit.ad
+                assignment = QueryTopAd(
                     id=query_id,
                     query=query,
                     ad_id=ad.id,
@@ -77,11 +106,15 @@ class AssignTopAdService:
                     cta=ad.cta,
                     score=hit.score,
                 )
-            )
-            if (i + 1) % 1000 == 0:
-                print(f"  assigned {i + 1:,}/{len(texts):,}")
+                chunk_assignments.append(assignment)
+                assignments.append(assignment)
+                
+            self._writer.save(chunk_assignments, output_path, append=wrote_something)
+            wrote_something = True
+            
+            processed_so_far = min(chunk_start + chunk_size, total_remaining)
+            print(f"  assigned {processed_so_far:,}/{total_remaining:,}")
 
-        self._writer.save(assignments, output_path)
         return assignments
 
 

@@ -31,10 +31,15 @@ class QueryDatasetRepository:
 
 class AssignmentCsvRepository:
     """Persists the top-1 ad assignment for each query to a CSV."""
-    def save(self, rows: list[QueryTopAd], path: Path) -> None:
+    def save(self, rows: list[QueryTopAd], path: Path, *, append: bool = False) -> None:
+        if not rows:
+            return
         path.parent.mkdir(parents=True, exist_ok=True)
         frame = pd.DataFrame([asdict(row) for row in rows])
-        frame.to_csv(path, index=False)
+        if append and path.exists():
+            frame.to_csv(path, mode="a", header=False, index=False)
+        else:
+            frame.to_csv(path, index=False)
         print(f"Saved {len(rows):,} rows to {path}")
 
 
