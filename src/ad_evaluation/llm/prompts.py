@@ -62,7 +62,8 @@ PREFERENCE_JSON_SCHEMA = {
 
 PREFERENCE_SYSTEM_PROMPT = """You are a digital marketing expert specializing in advertisement relevance and intent matching.
 
-Your task is to compare **two advertisements (Ad 1 and Ad 2)** for a given **user query** and determine which advertisement is more relevant, useful, and appropriate for the user's specific intent.
+Your task is to compare **two advertisements (Ad 1 and Ad 2)** for a given **user query** and determine which advertisement is more relevant, useful, 
+and appropriate for the user's specific intent.
 
 ### Evaluation Criteria
 
