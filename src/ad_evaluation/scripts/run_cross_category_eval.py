@@ -3,8 +3,7 @@ import sys
 from pathlib import Path
 
 from src.ad_evaluation.config import (
-    DEFAULT_ASSIGNMENTS_CSV,
-    DEFAULT_ADS_JSONL,
+    DEFAULT_ADS_CSV,
 )
 from src.ad_evaluation.llm.preference_judge import VllmPreferenceJudge
 from src.ad_evaluation.repository import PreferenceScoreCsvRepository
@@ -15,13 +14,13 @@ def main() -> int:
     parser.add_argument(
         "--assignments",
         type=Path,
-        default=DEFAULT_ASSIGNMENTS_CSV,
+        default=Path("data/processed/generation/bulk_ads/query_top1_ads.csv"),
         help="Path to query_top1_ads.csv",
     )
     parser.add_argument(
         "--ads",
         type=Path,
-        default=DEFAULT_ADS_JSONL,
+        default=Path("data/processed/ads/ads.jsonl"),
         help="Path to ads.jsonl containing all generated ad creatives",
     )
     parser.add_argument(
