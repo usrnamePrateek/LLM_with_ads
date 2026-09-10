@@ -38,7 +38,7 @@ def main() -> int:
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=500,
+        default=128,
         help="vLLM batch size",
     )
     args = parser.parse_args()
