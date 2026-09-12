@@ -372,3 +372,153 @@ class EvaluateCrossCategoryAdPreferenceService:
                 buffer = []
                 
         return all_rows
+
+class EvaluatePlacementComparisonService:
+    """Coordinates batch generation of pairwise placement comparisons."""
+    def __init__(
+        self,
+        writer: 'src.ad_evaluation.repository.PlacementComparisonScoreCsvRepository',
+        judge: 'src.ad_evaluation.llm.preference_judge.VllmPreferenceJudge',
+    ) -> None:
+        self._writer = writer
+        self._judge = judge
+
+    def run(
+        self,
+        positions_path: Path,
+        ads_path: Path,
+        output_path: Path,
+        limit: int | None = None,
+        batch_size: int = 100,
+    ) -> list['src.ad_evaluation.entities.PlacementComparisonScore']:
+        from src.ad_evaluation.entities import PlacementComparisonScore
+        from src.ad_evaluation.llm.prompts import build_placement_comparison_prompt
+        from src.ad_evaluation.llm.parsing import parse_placement_comparison
+        from src.ad_integration.core.placement import format_ad_block
+        
+        # Load positions and ads
+        positions = pd.read_csv(positions_path)
+        ads = pd.read_csv(ads_path)
+        
+        # We need headline, description, cta for the ad block
+        # Merge to get ad info
+        merged = positions.merge(ads, left_on="ad_id", right_on="id", suffixes=("", "_ad"))
+        
+        # Group by query_id and ad_id
+        grouped = merged.groupby(["id", "ad_id"])
+        
+        wrote_any = False
+        scored_keys = set()
+        if output_path.exists():
+            existing = pd.read_csv(output_path, dtype=str)
+            if "query_id" in existing.columns and "ad_id" in existing.columns and "pos_1" in existing.columns and "pos_2" in existing.columns and "is_swapped" in existing.columns:
+                scored_keys = set(
+                    zip(existing["query_id"], existing["ad_id"], existing["pos_1"], existing["pos_2"], existing["is_swapped"])
+                )
+                wrote_any = True
+                print(f"Resuming: {len(scored_keys):,} pairs already scored.")
+
+        pairs_to_test = []
+        for (query_id, ad_id), group in grouped:
+            query_id = str(query_id)
+            ad_id = str(ad_id)
+            query = str(group["query"].iloc[0])
+            
+            # Extract ad block
+            headline = str(group["headline"].iloc[0])
+            description = str(group["description"].iloc[0])
+            cta = str(group["cta"].iloc[0])
+            ad_block = format_ad_block(headline, description, cta)
+            
+            # Map positions to responses
+            responses = {row["position"]: str(row["response_with_ad"]) for _, row in group.iterrows()}
+            
+            if "semantic" not in responses:
+                continue
+                
+            semantic_response = responses["semantic"]
+            
+            for other_pos in ["first", "middle", "last"]:
+                if other_pos not in responses:
+                    continue
+                other_response = responses[other_pos]
+                
+                # Forward pair (semantic vs other)
+                fwd_key = (query_id, ad_id, "semantic", other_pos, "False")
+                if fwd_key not in scored_keys:
+                    pairs_to_test.append({
+                        "query_id": query_id,
+                        "query": query,
+                        "ad_id": ad_id,
+                        "ad_block": ad_block,
+                        "pos_1": "semantic",
+                        "pos_2": other_pos,
+                        "resp_1": semantic_response,
+                        "resp_2": other_response,
+                        "is_swapped": False
+                    })
+                    
+                # Swapped pair (other vs semantic)
+                rev_key = (query_id, ad_id, other_pos, "semantic", "True")
+                if rev_key not in scored_keys:
+                    pairs_to_test.append({
+                        "query_id": query_id,
+                        "query": query,
+                        "ad_id": ad_id,
+                        "ad_block": ad_block,
+                        "pos_1": other_pos,
+                        "pos_2": "semantic",
+                        "resp_1": other_response,
+                        "resp_2": semantic_response,
+                        "is_swapped": True
+                    })
+
+        if limit is not None:
+            pairs_to_test = pairs_to_test[:limit]
+
+        print(f"Total placement pairs to score: {len(pairs_to_test):,}")
+
+        all_rows = []
+        buffer = []
+        for start in range(0, len(pairs_to_test), batch_size):
+            batch = pairs_to_test[start:start + batch_size]
+            prompts = []
+            for item in batch:
+                prompts.append(build_placement_comparison_prompt(
+                    item["query"], 
+                    item["ad_block"], 
+                    item["resp_1"], 
+                    item["resp_2"]
+                ))
+                
+            raw_texts = self._judge.generate(prompts)
+            for item, raw in zip(batch, raw_texts):
+                try:
+                    winner_tag, confidence = parse_placement_comparison(raw)
+                    winner_pos = item["pos_1"] if winner_tag == "pos_1" else item["pos_2"]
+                except Exception as exc:
+                    print(f"  parse fail query_id={item['query_id']!r}: {exc}")
+                    winner_pos = "ERROR"
+                    confidence = f"parse_error: {exc}"
+                    
+                score = PlacementComparisonScore(
+                    query_id=item["query_id"],
+                    query=item["query"],
+                    ad_id=item["ad_id"],
+                    pos_1=item["pos_1"],
+                    pos_2=item["pos_2"],
+                    winner_pos=winner_pos,
+                    confidence=confidence,
+                    is_swapped=item["is_swapped"],
+                )
+                buffer.append(score)
+                
+            done = min(start + batch_size, len(pairs_to_test))
+            print(f"  scored {done:,}/{len(pairs_to_test):,}")
+            if len(buffer) >= 1000 or done == len(pairs_to_test):
+                self._writer.save(buffer, output_path, append=wrote_any)
+                wrote_any = True
+                all_rows.extend(buffer)
+                buffer = []
+                
+        return all_rows

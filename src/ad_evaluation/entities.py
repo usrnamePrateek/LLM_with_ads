@@ -17,11 +17,24 @@ class PlacementScore:
 
 @dataclass(frozen=True)
 class PairwisePreferenceScore:
-    """Represents a preference chosen by the LLM between two ads for a given query."""
+    """A scored preference comparing two ads for the same query."""
     query_id: str
     query: str
     ad_1_id: str
     ad_2_id: str
     winner_ad_id: str
+    confidence: str
+    is_swapped: bool
+
+
+@dataclass(frozen=True)
+class PlacementComparisonScore:
+    """A scored preference comparing two different placements for the same ad and query."""
+    query_id: str
+    query: str
+    ad_id: str
+    pos_1: str
+    pos_2: str
+    winner_pos: str
     confidence: str
     is_swapped: bool
