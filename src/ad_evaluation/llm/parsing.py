@@ -32,3 +32,16 @@ def parse_pairwise_preference(raw: str) -> tuple[str, str]:
     if confidence not in ("low", "medium", "high"):
         raise ValueError(f"confidence must be 'low', 'medium', or 'high', got {confidence!r}")
     return winner, confidence
+
+def parse_placement_comparison(raw: str) -> tuple[str, str]:
+    """Parses a raw LLM response into a winning position ('pos_1' or 'pos_2') and confidence level."""
+    payload = extract_json_value(raw)
+    if not isinstance(payload, dict):
+        raise ValueError("response is not a JSON object")
+    winner = payload.get("winner_pos")
+    if winner not in ("pos_1", "pos_2"):
+        raise ValueError(f"winner_pos must be 'pos_1' or 'pos_2', got {winner!r}")
+    confidence = str(payload.get("confidence", "")).strip().lower()
+    if confidence not in ("low", "medium", "high"):
+        raise ValueError(f"confidence must be 'low', 'medium', or 'high', got {confidence!r}")
+    return winner, confidence

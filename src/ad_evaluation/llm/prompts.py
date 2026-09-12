@@ -127,3 +127,65 @@ def build_pairwise_preference_prompt(query: str, ad_1_text: str, ad_2_text: str)
         f"--- Ad 1 ---\n{ad_1_text}\n\n"
         f"--- Ad 2 ---\n{ad_2_text}\n"
     )
+
+PLACEMENT_COMPARISON_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "winner_pos": {"type": "string", "enum": ["pos_1", "pos_2"]},
+        "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+    },
+    "required": ["winner_pos", "confidence"],
+    "additionalProperties": False,
+}
+
+PLACEMENT_COMPARISON_SYSTEM_PROMPT = """You are a digital marketing expert specializing in advertisement placement and content flow.
+
+Your task is to compare **two different placements (Placement 1 and Placement 2)** of the EXACT SAME advertisement within an LLM-generated response, and determine which placement is more natural and less disruptive.
+
+### Evaluation Criteria
+
+Evaluate both placements based on:
+
+1. **Contextual Coherence**
+   Does inserting the advertisement at this specific position feel natural given the text immediately before and after it?
+
+2. **Flow Disruption**
+   Does the advertisement interrupt an important explanation, argument, list, instruction, or narrative? (A placement that breaks a sentence, splits a bulleted list awkwardly, or disrupts a direct thought is poor).
+
+3. **Transition Naturalness**
+   Does the placement feel like a logical point to pause and show an ad, such as between paragraphs or sections?
+
+### Confidence
+
+Assign a confidence level to your decision:
+
+* **high** — One placement is clearly much more natural or much less disruptive than the other.
+* **medium** — One placement is somewhat better, but the difference is relatively small.
+* **low** — Both placements are equally good, equally disruptive, or the difference is trivial.
+
+### Output Format
+
+Return **ONLY valid JSON**. Do not include explanations, reasoning, markdown, or additional fields.
+
+```json
+{
+  "winner_pos": "pos_1",
+  "confidence": "high"
+}
+```
+
+Where:
+
+* `"winner_pos"` must be either `"pos_1"` or `"pos_2"`.
+* `"confidence"` must be `"high"`, `"medium"`, or `"low"`.
+"""
+
+
+def build_placement_comparison_prompt(query: str, ad_text: str, response_1: str, response_2: str) -> str:
+    """Formats the user query, ad text, and two placed responses for placement comparison."""
+    return (
+        f"Query: {query}\n\n"
+        f"--- Ad ---\n{ad_text}\n\n"
+        f"--- Placement 1 ---\n{response_1}\n\n"
+        f"--- Placement 2 ---\n{response_2}\n"
+    )
