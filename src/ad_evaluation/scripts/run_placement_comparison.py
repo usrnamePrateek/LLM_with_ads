@@ -6,10 +6,10 @@ import sys
 from pathlib import Path
 
 from src.ad_evaluation.config import (
-    JUDGE_BATCH_SIZE,
-    JUDGE_GPU_MEMORY_UTILIZATION,
-    JUDGE_MAX_MODEL_LEN,
-    JUDGE_MODEL_NAME,
+    PLACEMENT_JUDGE_BATCH_SIZE,
+    PLACEMENT_JUDGE_GPU_MEMORY_UTILIZATION,
+    PLACEMENT_JUDGE_MAX_MODEL_LEN,
+    PLACEMENT_JUDGE_MODEL_NAME,
 )
 from src.ad_evaluation.llm.preference_judge import VllmPlacementComparisonJudge
 from src.ad_evaluation.repository import PlacementComparisonScoreCsvRepository
@@ -38,10 +38,10 @@ def main() -> int:
         default=Path("data/evaluation/placement_comparison_scores.csv"),
         help="Path to save the comparison scores."
     )
-    parser.add_argument("--model", default=JUDGE_MODEL_NAME)
-    parser.add_argument("--max-model-len", type=int, default=JUDGE_MAX_MODEL_LEN)
-    parser.add_argument("--gpu-memory-utilization", type=float, default=JUDGE_GPU_MEMORY_UTILIZATION)
-    parser.add_argument("--batch-size", type=int, default=JUDGE_BATCH_SIZE)
+    parser.add_argument("--model", default=PLACEMENT_JUDGE_MODEL_NAME)
+    parser.add_argument("--max-model-len", type=int, default=PLACEMENT_JUDGE_MAX_MODEL_LEN)
+    parser.add_argument("--gpu-memory-utilization", type=float, default=PLACEMENT_JUDGE_GPU_MEMORY_UTILIZATION)
+    parser.add_argument("--batch-size", type=int, default=PLACEMENT_JUDGE_BATCH_SIZE)
     parser.add_argument("--limit", type=int, default=None)
     
     args = parser.parse_args()

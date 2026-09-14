@@ -10,6 +10,10 @@ from src.ad_evaluation.config import (
     JUDGE_MAX_MODEL_LEN,
     JUDGE_MAX_TOKENS,
     JUDGE_MODEL_NAME,
+    PLACEMENT_JUDGE_MODEL_NAME,
+    PLACEMENT_JUDGE_MAX_MODEL_LEN,
+    PLACEMENT_JUDGE_GPU_MEMORY_UTILIZATION,
+    PLACEMENT_JUDGE_MAX_TOKENS,
 )
 from src.ad_evaluation.llm.prompts import (
     PREFERENCE_JSON_SCHEMA, 
@@ -39,16 +43,18 @@ class VllmPreferenceJudge(BaseVllmGenerator):
 class VllmPlacementComparisonJudge(BaseVllmGenerator):
     def __init__(
         self,
-        model_name: str = JUDGE_MODEL_NAME,
-        max_model_len: int = JUDGE_MAX_MODEL_LEN,
-        gpu_memory_utilization: float = JUDGE_GPU_MEMORY_UTILIZATION,
+        model_name: str = PLACEMENT_JUDGE_MODEL_NAME,
+        max_model_len: int = PLACEMENT_JUDGE_MAX_MODEL_LEN,
+        gpu_memory_utilization: float = PLACEMENT_JUDGE_GPU_MEMORY_UTILIZATION,
     ) -> None:
         super().__init__(
             model_name=model_name,
             max_model_len=max_model_len,
-            max_new_tokens=JUDGE_MAX_TOKENS,
+            max_new_tokens=PLACEMENT_JUDGE_MAX_TOKENS,
             gpu_memory_utilization=gpu_memory_utilization,
             system_prompt=PLACEMENT_COMPARISON_SYSTEM_PROMPT,
-            json_schema=PLACEMENT_COMPARISON_JSON_SCHEMA,
+            json_schema=None,
             temperature=0.0,
+            quantization="fp8",
+            enable_thinking=True,
         )
