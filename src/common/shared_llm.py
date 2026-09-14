@@ -24,6 +24,8 @@ class BaseVllmGenerator:
         temperature: float = 0.0,
         top_p: float = 1.0,
         top_k: int = -1,
+        quantization: str | None = None,
+        enable_thinking: bool = False,
     ) -> None:
         if dtype == "float16" and not torch.cuda.is_available():
             raise SystemExit(f"CUDA GPU is required for {model_name} fp16")
@@ -38,10 +40,12 @@ class BaseVllmGenerator:
             max_model_len=max_model_len,
             gpu_memory_utilization=gpu_memory_utilization,
             tensor_parallel_size=tensor_parallel_size,
+            quantization=quantization,
         )
         self._max_prompt_tokens = max_model_len - max_new_tokens
         self._tokenizer = self._llm.get_tokenizer()
         self._system_prompt = system_prompt
+        self._enable_thinking = enable_thinking
         
         structured_kwargs = {}
         if json_schema:
@@ -83,7 +87,7 @@ class BaseVllmGenerator:
                 messages,
                 tokenize=False,
                 add_generation_prompt=True,
-                enable_thinking=False,
+                enable_thinking=self._enable_thinking,
             )
         except TypeError:
             return self._tokenizer.apply_chat_template(

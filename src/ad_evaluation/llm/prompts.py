@@ -165,7 +165,8 @@ Assign a confidence level to your decision:
 
 ### Output Format
 
-Return **ONLY valid JSON**. Do not include explanations, reasoning, markdown, or additional fields.
+Think step-by-step about each placement, analyzing their contextual coherence, flow disruption, and transition naturalness. 
+After your reasoning, output your final decision as **ONLY valid JSON** within a JSON block. Do not include any other text after the JSON block.
 
 ```json
 {
