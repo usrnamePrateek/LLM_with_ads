@@ -378,7 +378,7 @@ class EvaluatePlacementComparisonService:
     def __init__(
         self,
         writer: 'src.ad_evaluation.repository.PlacementComparisonScoreCsvRepository',
-        judge: 'src.ad_evaluation.llm.preference_judge.VllmPreferenceJudge',
+        judge: 'src.ad_evaluation.llm.preference_judge.VllmPlacementComparisonJudge',
     ) -> None:
         self._writer = writer
         self._judge = judge
@@ -394,7 +394,7 @@ class EvaluatePlacementComparisonService:
         from src.ad_evaluation.entities import PlacementComparisonScore
         from src.ad_evaluation.llm.prompts import build_placement_comparison_prompt
         from src.ad_evaluation.llm.parsing import parse_placement_comparison
-        from src.ad_integration.core.placement import format_ad_block
+        from src.ad_evaluation.core.masking import mask_ad_in_response
         
         # Load positions and ads
         positions = pd.read_csv(positions_path)
@@ -402,7 +402,7 @@ class EvaluatePlacementComparisonService:
         
         # We need headline, description, cta for the ad block
         # Merge to get ad info
-        merged = positions.merge(ads, left_on="ad_id", right_on="id", suffixes=("", "_ad"))
+        merged = positions.merge(ads, on=["id", "ad_id"], suffixes=("", "_ad"))
         
         # Group by query_id and ad_id
         grouped = merged.groupby(["id", "ad_id"])
@@ -428,7 +428,6 @@ class EvaluatePlacementComparisonService:
             headline = str(group["headline"].iloc[0])
             description = str(group["description"].iloc[0])
             cta = str(group["cta"].iloc[0])
-            ad_block = format_ad_block(headline, description, cta)
             
             # Map positions to responses
             responses = {row["position"]: str(row["response_with_ad"]) for _, row in group.iterrows()}
@@ -443,6 +442,10 @@ class EvaluatePlacementComparisonService:
                     continue
                 other_response = responses[other_pos]
                 
+                # Mask the ads
+                masked_semantic, ad_block = mask_ad_in_response(semantic_response, headline, description, cta)
+                masked_other, _ = mask_ad_in_response(other_response, headline, description, cta)
+                
                 # Forward pair (semantic vs other)
                 fwd_key = (query_id, ad_id, "semantic", other_pos, "False")
                 if fwd_key not in scored_keys:
@@ -453,8 +456,8 @@ class EvaluatePlacementComparisonService:
                         "ad_block": ad_block,
                         "pos_1": "semantic",
                         "pos_2": other_pos,
-                        "resp_1": semantic_response,
-                        "resp_2": other_response,
+                        "resp_1": masked_semantic,
+                        "resp_2": masked_other,
                         "is_swapped": False
                     })
                     
@@ -468,8 +471,8 @@ class EvaluatePlacementComparisonService:
                         "ad_block": ad_block,
                         "pos_1": other_pos,
                         "pos_2": "semantic",
-                        "resp_1": other_response,
-                        "resp_2": semantic_response,
+                        "resp_1": masked_other,
+                        "resp_2": masked_semantic,
                         "is_swapped": True
                     })
 

@@ -11,7 +11,7 @@ from src.ad_evaluation.config import (
     JUDGE_MAX_MODEL_LEN,
     JUDGE_MODEL_NAME,
 )
-from src.ad_evaluation.llm.preference_judge import VllmPreferenceJudge
+from src.ad_evaluation.llm.preference_judge import VllmPlacementComparisonJudge
 from src.ad_evaluation.repository import PlacementComparisonScoreCsvRepository
 from src.ad_evaluation.services import EvaluatePlacementComparisonService
 
@@ -46,7 +46,7 @@ def main() -> int:
     
     args = parser.parse_args()
 
-    judge = VllmPreferenceJudge(
+    judge = VllmPlacementComparisonJudge(
         model_name=args.model,
         max_model_len=args.max_model_len,
         gpu_memory_utilization=args.gpu_memory_utilization,
