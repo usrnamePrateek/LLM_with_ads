@@ -15,6 +15,7 @@ QUERY_COLUMN = "query"
 
 # Embedding retrieval config
 EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
+DEFAULT_RETRIEVAL_DEVICE = "cuda"
 
 # LLM generation config
 DEFAULT_LLM_MODEL = "nvidia/Llama-3.3-70B-Instruct-FP8"

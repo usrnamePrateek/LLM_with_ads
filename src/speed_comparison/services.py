@@ -27,6 +27,7 @@ from src.speed_comparison.config import (
     DEFAULT_MAX_NEW_TOKENS,
     DEFAULT_OUTPUT_CSV,
     DEFAULT_QUERIES_PARQUET,
+    DEFAULT_RETRIEVAL_DEVICE,
     DEFAULT_SUMMARY_JSON,
     DEFAULT_TEMPERATURE,
     DEFAULT_TOP_K,
@@ -192,6 +193,7 @@ class SpeedComparisonOrchestrator:
         gpu_memory_utilization: float = DEFAULT_GPU_MEMORY_UTILIZATION,
         temperature: float = DEFAULT_TEMPERATURE,
         top_k: int = DEFAULT_TOP_K,
+        retrieval_device: str = DEFAULT_RETRIEVAL_DEVICE,
         checkpoint_every: int = CHECKPOINT_EVERY,
     ) -> SpeedBenchmarkSummary:
         """Executes the full two-phase speed benchmark on queries."""
@@ -214,7 +216,9 @@ class SpeedComparisonOrchestrator:
         print(f"Total queries to benchmark: {total_queries:,}")
         if total_queries == 0:
             print("All queries have already been benchmarked in existing output.")
-            return self._build_summary_from_existing(output_csv, llm_model, EMBEDDING_MODEL_NAME)
+            return self._build_summary_from_existing(
+                output_csv, llm_model, EMBEDDING_MODEL_NAME, retrieval_device=retrieval_device
+            )
 
         query_tuples = [
             (str(row[ID_COLUMN]), str(row[QUERY_COLUMN]))
@@ -222,12 +226,13 @@ class SpeedComparisonOrchestrator:
         ]
 
         # ── Phase 1: Ad Retrieval Benchmark ────────────────────────────────────
-        print("\n=== Phase 1: Benchmarking Ad Retrieval (BGE-M3 + FAISS) ===")
+        print(f"\n=== Phase 1: Benchmarking Ad Retrieval (BGE-M3 on {retrieval_device} + FAISS) ===")
         t_retrieval_start = time.perf_counter()
         retrieval_timings_dict = self._run_retrieval_phase(
             query_tuples=query_tuples,
             index_dir=index_dir,
             top_k=top_k,
+            retrieval_device=retrieval_device,
         )
         t_retrieval_total = time.perf_counter() - t_retrieval_start
         print(f"Phase 1 complete in {t_retrieval_total:.2f}s ({total_queries / t_retrieval_total:.1f} queries/s)")
@@ -302,6 +307,7 @@ class SpeedComparisonOrchestrator:
             records=all_records,
             llm_model=llm_model,
             embedding_model=EMBEDDING_MODEL_NAME,
+            retrieval_device=retrieval_device,
             retrieval_wall_clock_sec=t_retrieval_total,
             llm_wall_clock_sec=t_llm_total,
         )
@@ -314,11 +320,12 @@ class SpeedComparisonOrchestrator:
         query_tuples: Sequence[tuple[str, str]],
         index_dir: Path,
         top_k: int,
+        retrieval_device: str = DEFAULT_RETRIEVAL_DEVICE,
     ) -> dict[str, QueryRetrievalTiming]:
         """Loads index and encoder, executes retrieval benchmark, unloads encoder."""
         store = FaissVectorStore(index_dir)
         store.load()
-        encoder = BgeM3Encoder()
+        encoder = BgeM3Encoder(device=retrieval_device)
         service = RetrievalBenchmarkService(encoder=encoder, store=store)
         timings = service.benchmark_queries(query_tuples, k=top_k)
 
@@ -333,6 +340,7 @@ class SpeedComparisonOrchestrator:
         records: list[QuerySpeedComparisonRecord],
         llm_model: str,
         embedding_model: str,
+        retrieval_device: str,
         retrieval_wall_clock_sec: float,
         llm_wall_clock_sec: float,
     ) -> SpeedBenchmarkSummary:
@@ -350,6 +358,7 @@ class SpeedComparisonOrchestrator:
             sample_size=len(records),
             llm_model=llm_model,
             embedding_model=embedding_model,
+            retrieval_device=retrieval_device,
             retrieval_distribution=compute_distribution(retrieval_times),
             embed_distribution=compute_distribution(embed_times),
             search_distribution=compute_distribution(search_times),
@@ -370,6 +379,7 @@ class SpeedComparisonOrchestrator:
         output_csv: Path,
         llm_model: str,
         embedding_model: str,
+        retrieval_device: str = DEFAULT_RETRIEVAL_DEVICE,
     ) -> SpeedBenchmarkSummary:
         """Builds summary from existing output CSV if all queries were previously processed."""
         df = self._repo.load_records(output_csv)
@@ -396,6 +406,7 @@ class SpeedComparisonOrchestrator:
             records=records,
             llm_model=llm_model,
             embedding_model=embedding_model,
+            retrieval_device=retrieval_device,
             retrieval_wall_clock_sec=0.0,
             llm_wall_clock_sec=0.0,
         )
@@ -412,8 +423,8 @@ class SpeedComparisonOrchestrator:
 
         header = f"\n{'=' * 75}\nSPEED COMPARISON BENCHMARK REPORT (N = {summary.sample_size:,})\n{'=' * 75}"
         models_info = (
-            f"Embedding Model: {summary.embedding_model}\n"
-            f"LLM Model:       {summary.llm_model}\n"
+            f"Embedding Model:   {summary.embedding_model} (Device: {summary.retrieval_device})\n"
+            f"LLM Model:         {summary.llm_model}\n"
             f"{'-' * 75}\n"
             f"{'Metric (ms)':<25} {'Mean':>10} {'P50':>10} {'P90':>10} {'P95':>10} {'P99':>10}\n"
             f"{'-' * 75}\n"

@@ -15,6 +15,7 @@ from src.speed_comparison.config import (
     DEFAULT_NUM_QUERIES,
     DEFAULT_OUTPUT_CSV,
     DEFAULT_QUERIES_PARQUET,
+    DEFAULT_RETRIEVAL_DEVICE,
     DEFAULT_SUMMARY_JSON,
     DEFAULT_TEMPERATURE,
     DEFAULT_TOP_K,
@@ -99,6 +100,13 @@ def parse_args() -> argparse.Namespace:
         help="Number of top ads to retrieve per query (default: 1).",
     )
     parser.add_argument(
+        "--retrieval-device",
+        type=str,
+        choices=["cuda", "cpu"],
+        default=DEFAULT_RETRIEVAL_DEVICE,
+        help=f"Device for BGE-M3 embedding encoder (default: {DEFAULT_RETRIEVAL_DEVICE}).",
+    )
+    parser.add_argument(
         "--checkpoint-every",
         type=int,
         default=CHECKPOINT_EVERY,
@@ -125,6 +133,7 @@ def main() -> None:
         gpu_memory_utilization=args.gpu_memory_utilization,
         temperature=args.temperature,
         top_k=args.top_k,
+        retrieval_device=args.retrieval_device,
         checkpoint_every=args.checkpoint_every,
     )
 

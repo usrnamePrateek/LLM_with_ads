@@ -10,10 +10,12 @@ Benchmarks and compares query-time ad retrieval latency against LLM response gen
 
 ## Two-Phase Execution Architecture
 
-Because both `vLLM` and `BgeM3Encoder` require GPU resources, running them concurrently on a single GPU can cause CUDA out-of-memory errors:
-- **Phase 1 (Retrieval)**: Loads `FaissVectorStore` and `BgeM3Encoder`, runs retrieval on all queries, logs timings, then unloads the encoder and invokes `torch.cuda.empty_cache()` and `gc.collect()`.
-- **Phase 2 (LLM Generation)**: Instantiates `VllmBenchmarkGenerator`, generates responses, measures generation times, and periodically checkpoints results.
+Because both `vLLM` and `BgeM3Encoder` require GPU resources when running on CUDA, running them concurrently on a single GPU can cause CUDA out-of-memory errors:
+- **Phase 1 (Retrieval)**: Loads `FaissVectorStore` and `BgeM3Encoder` on `--retrieval-device` (`cuda` by default, or `cpu`), runs retrieval on all queries, logs timings, then unloads the encoder and invokes `torch.cuda.empty_cache()` and `gc.collect()`.
+- **Phase 2 (LLM Generation)**: Instantiates `VllmBenchmarkGenerator` on GPU, generates responses, measures generation times, and periodically checkpoints results.
 - **Phase 3 (Analysis & Report)**: Merges records, computes distributions, exports CSV + JSON, and prints a formatted terminal report.
+
+Note: If `--retrieval-device cpu` is specified, BGE-M3 encodes on CPU (zero GPU VRAM usage), while FAISS always executes on CPU via `faiss-cpu`.
 
 ## Conventions
 

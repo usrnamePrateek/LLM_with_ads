@@ -152,6 +152,7 @@ class TestSpeedComparisonRepository(unittest.TestCase):
             sample_size=10,
             llm_model="test-llm",
             embedding_model="test-embed",
+            retrieval_device="cuda",
             retrieval_distribution=dist,
             embed_distribution=dist,
             search_distribution=dist,

@@ -70,6 +70,7 @@ class SpeedBenchmarkSummary:
     sample_size: int
     llm_model: str
     embedding_model: str
+    retrieval_device: str
     retrieval_distribution: LatencyDistribution
     embed_distribution: LatencyDistribution
     search_distribution: LatencyDistribution
