@@ -15,6 +15,7 @@ class QueryRetrievalTiming:
     total_retrieval_ms: float
     retrieved_ad_id: str
     retrieved_ad_score: float
+    timestamp: str = ""
 
 
 @dataclass
@@ -27,6 +28,7 @@ class QueryLlmTiming:
     output_tokens: int
     tokens_per_sec: float
     llm_response: str
+    timestamp: str = ""
 
 
 @dataclass
@@ -49,6 +51,7 @@ class QuerySpeedComparisonRecord:
     speedup_ratio: float  # llm_time_ms / retrieval_time_ms
     time_delta_ms: float  # llm_time_ms - retrieval_time_ms
     retrieval_finished_first: bool
+    timestamp: str = ""
 
 
 @dataclass
@@ -82,6 +85,7 @@ class SpeedBenchmarkSummary:
     mean_tokens_per_sec: float
     total_retrieval_wall_clock_sec: float
     total_llm_wall_clock_sec: float
+    timestamp: str = ""
 
 
 def compute_distribution(values: list[float]) -> LatencyDistribution:

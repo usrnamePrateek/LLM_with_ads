@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import gc
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
 
@@ -56,6 +57,7 @@ class RetrievalBenchmarkService:
     def benchmark_query(self, query_id: str, query_text: str, k: int = 1) -> QueryRetrievalTiming:
         """Benchmarks retrieval for a single query with CUDA synchronization."""
         clean_text = query_text.strip()
+        now_ts = datetime.now(timezone.utc).isoformat()
         if not clean_text:
             return QueryRetrievalTiming(
                 id=query_id,
@@ -65,6 +67,7 @@ class RetrievalBenchmarkService:
                 total_retrieval_ms=0.0,
                 retrieved_ad_id="",
                 retrieved_ad_score=0.0,
+                timestamp=now_ts,
             )
 
         if torch.cuda.is_available():
@@ -92,6 +95,7 @@ class RetrievalBenchmarkService:
             total_retrieval_ms=embed_time_ms + search_time_ms,
             retrieved_ad_id=top_id,
             retrieved_ad_score=top_score,
+            timestamp=now_ts,
         )
 
     def benchmark_queries(
@@ -165,6 +169,7 @@ class VllmBenchmarkGenerator(BaseVllmGenerator):
             output_tokens=output_tokens,
             tokens_per_sec=tokens_per_sec,
             llm_response=clean_text,
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
 
 
@@ -194,9 +199,13 @@ class SpeedComparisonOrchestrator:
         temperature: float = DEFAULT_TEMPERATURE,
         top_k: int = DEFAULT_TOP_K,
         retrieval_device: str = DEFAULT_RETRIEVAL_DEVICE,
+        retrieval_only: bool = False,
         checkpoint_every: int = CHECKPOINT_EVERY,
     ) -> SpeedBenchmarkSummary:
         """Executes the full two-phase speed benchmark on queries."""
+        run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        target_output_csv = output_csv.parent / f"{output_csv.stem}_{run_ts}{output_csv.suffix}"
+        target_summary_json = summary_json.parent / f"{summary_json.stem}_{run_ts}{summary_json.suffix}"
         # 1. Load dataset queries
         frame = self._query_loader.load(queries_path, query_column=QUERY_COLUMN)
         if ID_COLUMN not in frame.columns:
@@ -206,7 +215,7 @@ class SpeedComparisonOrchestrator:
 
         # 2. Checkpointing: filter out already-processed IDs
         processed_ids = self._repo.load_processed_ids(output_csv)
-        if processed_ids:
+        if processed_ids and not retrieval_only:
             frame = frame[~frame[ID_COLUMN].isin(processed_ids)].copy()
 
         if limit is not None:
@@ -236,6 +245,40 @@ class SpeedComparisonOrchestrator:
         )
         t_retrieval_total = time.perf_counter() - t_retrieval_start
         print(f"Phase 1 complete in {t_retrieval_total:.2f}s ({total_queries / t_retrieval_total:.1f} queries/s)")
+
+        if retrieval_only:
+            print("\n=== --retrieval-only requested: skipping LLM Phase ===")
+            retrieval_records = list(retrieval_timings_dict.values())
+            embed_times = [r.embed_time_ms for r in retrieval_records]
+            search_times = [r.search_time_ms for r in retrieval_records]
+            total_times = [r.total_retrieval_ms for r in retrieval_records]
+            r_dist = compute_distribution(total_times)
+            e_dist = compute_distribution(embed_times)
+            s_dist = compute_distribution(search_times)
+            empty_dist = compute_distribution([])
+            summary = SpeedBenchmarkSummary(
+                sample_size=len(retrieval_records),
+                llm_model="(skipped)",
+                embedding_model=EMBEDDING_MODEL_NAME,
+                retrieval_device=retrieval_device,
+                retrieval_distribution=r_dist,
+                embed_distribution=e_dist,
+                search_distribution=s_dist,
+                llm_distribution=empty_dist,
+                mean_speedup_ratio=0.0,
+                median_speedup_ratio=0.0,
+                mean_time_delta_ms=0.0,
+                pct_retrieval_finished_first=100.0,
+                mean_tokens_per_sec=0.0,
+                total_retrieval_wall_clock_sec=t_retrieval_total,
+                total_llm_wall_clock_sec=0.0,
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
+            retrieval_csv = output_csv.parent / f"retrieval_{output_csv.stem}_{run_ts}{output_csv.suffix}"
+            self._repo.save_retrieval_records(retrieval_records, retrieval_csv)
+            self._repo.save_summary(summary, target_summary_json)
+            self._print_retrieval_report(summary)
+            return summary
 
         # ── Clean GPU memory before loading vLLM ──────────────────────────────
         gc.collect()
@@ -280,6 +323,7 @@ class SpeedComparisonOrchestrator:
                 speedup_ratio=speedup,
                 time_delta_ms=llm_ms - retrieval_ms,
                 retrieval_finished_first=retrieval_ms < llm_ms,
+                timestamp=datetime.now(timezone.utc).isoformat(),
             )
             all_records.append(record)
             pending_buffer.append(record)
@@ -294,7 +338,11 @@ class SpeedComparisonOrchestrator:
 
             # Checkpoint flush
             if len(pending_buffer) >= checkpoint_every or idx == total_queries:
-                self._repo.save_records(pending_buffer, output_csv, append=wrote_any)
+                self._repo.save_records(
+                    pending_buffer,
+                    target_output_csv,
+                    append=wrote_any,
+                )
                 wrote_any = True
                 pending_buffer = []
 
@@ -311,7 +359,7 @@ class SpeedComparisonOrchestrator:
             retrieval_wall_clock_sec=t_retrieval_total,
             llm_wall_clock_sec=t_llm_total,
         )
-        self._repo.save_summary(summary, summary_json)
+        self._repo.save_summary(summary, target_summary_json)
         self.print_report(summary)
         return summary
 
@@ -372,6 +420,7 @@ class SpeedComparisonOrchestrator:
             mean_tokens_per_sec=float(np.mean(tokens_per_sec)) if tokens_per_sec else 0.0,
             total_retrieval_wall_clock_sec=retrieval_wall_clock_sec,
             total_llm_wall_clock_sec=llm_wall_clock_sec,
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
 
     def _build_summary_from_existing(
@@ -439,6 +488,30 @@ class SpeedComparisonOrchestrator:
             f"  • Mean Latency Gap:                  {summary.mean_time_delta_ms:.2f} ms\n"
             f"  • Retrieval Finished First:          {summary.pct_retrieval_finished_first:.1f}%\n"
             f"  • Mean LLM Generation Throughput:    {summary.mean_tokens_per_sec:.1f} tokens/s\n"
+            f"{'=' * 75}\n"
+        )
+        print(header)
+        print(models_info)
+
+    @staticmethod
+    def _print_retrieval_report(summary: SpeedBenchmarkSummary) -> None:
+        """Prints a retrieval-only latency report."""
+        r_dist = summary.retrieval_distribution
+        e_dist = summary.embed_distribution
+        s_dist = summary.search_distribution
+
+        header = f"\n{'=' * 75}\nAD RETRIEVAL SPEED BENCHMARK REPORT (N = {summary.sample_size:,})\n{'=' * 75}"
+        models_info = (
+            f"Embedding Model:   {summary.embedding_model} (Device: {summary.retrieval_device})\n"
+            f"Vector Index:      FAISS InnerProduct (CPU)\n"
+            f"{'-' * 75}\n"
+            f"{'Metric (ms)':<25} {'Mean':>10} {'P50':>10} {'P90':>10} {'P95':>10} {'P99':>10}\n"
+            f"{'-' * 75}\n"
+            f"{'Ad Retrieval (Total)':<25} {r_dist.mean:>10.2f} {r_dist.p50:>10.2f} {r_dist.p90:>10.2f} {r_dist.p95:>10.2f} {r_dist.p99:>10.2f}\n"
+            f"{'  - Query Embedding':<25} {e_dist.mean:>10.2f} {e_dist.p50:>10.2f} {e_dist.p90:>10.2f} {e_dist.p95:>10.2f} {e_dist.p99:>10.2f}\n"
+            f"{'  - FAISS Search':<25} {s_dist.mean:>10.2f} {s_dist.p50:>10.2f} {s_dist.p90:>10.2f} {s_dist.p95:>10.2f} {s_dist.p99:>10.2f}\n"
+            f"{'-' * 75}\n"
+            f"Throughput: {summary.sample_size / summary.total_retrieval_wall_clock_sec:.1f} queries/s\n"
             f"{'=' * 75}\n"
         )
         print(header)

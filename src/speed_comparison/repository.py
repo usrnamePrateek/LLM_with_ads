@@ -33,6 +33,19 @@ class SpeedComparisonRepository:
             frame.to_csv(path, index=False)
         print(f"Saved {len(records):,} records to {path}")
 
+    def save_retrieval_records(
+        self,
+        records: Sequence[object],
+        path: Path,
+    ) -> None:
+        """Persists retrieval-only timing records to CSV using dataclasses.asdict."""
+        if not records:
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        frame = pd.DataFrame([asdict(record) for record in records])
+        frame.to_csv(path, index=False)
+        print(f"Saved {len(records):,} retrieval records to {path}")
+
     def load_processed_ids(self, path: Path) -> set[str]:
         """Loads already processed query IDs from an existing output CSV for checkpointing."""
         if not path.exists():
@@ -47,7 +60,11 @@ class SpeedComparisonRepository:
             print(f"Warning: could not read existing output for checkpointing: {err}")
         return set()
 
-    def save_summary(self, summary: SpeedBenchmarkSummary, path: Path) -> None:
+    def save_summary(
+        self,
+        summary: SpeedBenchmarkSummary,
+        path: Path,
+    ) -> None:
         """Persists the aggregated benchmark summary to a structured JSON file."""
         path.parent.mkdir(parents=True, exist_ok=True)
         data = asdict(summary)

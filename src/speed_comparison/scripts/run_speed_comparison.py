@@ -107,6 +107,11 @@ def parse_args() -> argparse.Namespace:
         help=f"Device for BGE-M3 embedding encoder (default: {DEFAULT_RETRIEVAL_DEVICE}).",
     )
     parser.add_argument(
+        "--retrieval-only",
+        action="store_true",
+        help="Benchmark only the ad retrieval phase (embedding + vector search) without loading or running the LLM.",
+    )
+    parser.add_argument(
         "--checkpoint-every",
         type=int,
         default=CHECKPOINT_EVERY,
@@ -134,6 +139,7 @@ def main() -> None:
         temperature=args.temperature,
         top_k=args.top_k,
         retrieval_device=args.retrieval_device,
+        retrieval_only=args.retrieval_only,
         checkpoint_every=args.checkpoint_every,
     )
 
