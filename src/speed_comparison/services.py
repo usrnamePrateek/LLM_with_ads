@@ -50,12 +50,18 @@ from src.speed_comparison.repository import SpeedComparisonRepository
 class RetrievalBenchmarkService:
     """Measures precise embedding and vector search latencies for ad retrieval."""
 
-    def __init__(self, encoder: EmbeddingEncoder, store: VectorStore) -> None:
+    def __init__(
+        self,
+        encoder: EmbeddingEncoder,
+        store: VectorStore,
+        device: str = "cuda",
+    ) -> None:
         self._encoder = encoder
         self._store = store
+        self._device = device
 
     def benchmark_query(self, query_id: str, query_text: str, k: int = 1) -> QueryRetrievalTiming:
-        """Benchmarks retrieval for a single query with CUDA synchronization."""
+        """Benchmarks retrieval for a single query with device-appropriate synchronization."""
         clean_text = query_text.strip()
         now_ts = datetime.now(timezone.utc).isoformat()
         if not clean_text:
@@ -70,11 +76,11 @@ class RetrievalBenchmarkService:
                 timestamp=now_ts,
             )
 
-        if torch.cuda.is_available():
+        if self._device == "cuda" and torch.cuda.is_available():
             torch.cuda.synchronize()
         t0 = time.perf_counter()
         vectors = self._encoder.encode_queries([clean_text])
-        if torch.cuda.is_available():
+        if self._device == "cuda" and torch.cuda.is_available():
             torch.cuda.synchronize()
         t1 = time.perf_counter()
         embed_time_ms = (t1 - t0) * 1000.0
@@ -190,6 +196,7 @@ class SpeedComparisonOrchestrator:
         index_dir: Path = DEFAULT_INDEX_DIR,
         output_csv: Path = DEFAULT_OUTPUT_CSV,
         summary_json: Path = DEFAULT_SUMMARY_JSON,
+        run_dir: Path | None = None,
         limit: int | None = 1000,
         batch_size: int = DEFAULT_BATCH_SIZE,
         llm_model: str = DEFAULT_LLM_MODEL,
@@ -204,8 +211,19 @@ class SpeedComparisonOrchestrator:
     ) -> SpeedBenchmarkSummary:
         """Executes the full two-phase speed benchmark on queries."""
         run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        target_output_csv = output_csv.parent / f"{output_csv.stem}_{run_ts}{output_csv.suffix}"
-        target_summary_json = summary_json.parent / f"{summary_json.stem}_{run_ts}{summary_json.suffix}"
+        if run_dir is not None:
+            target_dir = Path(run_dir)
+        else:
+            target_dir = output_csv.parent / f"run_{run_ts}"
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        target_output_csv = target_dir / output_csv.name
+        target_summary_json = target_dir / summary_json.name
+
+        print(f"Benchmark run directory: {target_dir}")
+        print(f"Output records path: {target_output_csv}")
+        print(f"Summary JSON path: {target_summary_json}")
+
         # 1. Load dataset queries
         frame = self._query_loader.load(queries_path, query_column=QUERY_COLUMN)
         if ID_COLUMN not in frame.columns:
@@ -214,7 +232,9 @@ class SpeedComparisonOrchestrator:
             frame[ID_COLUMN] = frame[ID_COLUMN].astype(str)
 
         # 2. Checkpointing: filter out already-processed IDs
-        processed_ids = self._repo.load_processed_ids(output_csv)
+        processed_ids = self._repo.load_processed_ids(target_output_csv)
+        if not processed_ids and output_csv != target_output_csv and output_csv.exists():
+            processed_ids = self._repo.load_processed_ids(output_csv)
         if processed_ids and not retrieval_only:
             frame = frame[~frame[ID_COLUMN].isin(processed_ids)].copy()
 
@@ -225,8 +245,9 @@ class SpeedComparisonOrchestrator:
         print(f"Total queries to benchmark: {total_queries:,}")
         if total_queries == 0:
             print("All queries have already been benchmarked in existing output.")
+            source_csv = target_output_csv if target_output_csv.exists() else output_csv
             return self._build_summary_from_existing(
-                output_csv, llm_model, EMBEDDING_MODEL_NAME, retrieval_device=retrieval_device
+                source_csv, llm_model, EMBEDDING_MODEL_NAME, retrieval_device=retrieval_device
             )
 
         query_tuples = [
@@ -236,14 +257,12 @@ class SpeedComparisonOrchestrator:
 
         # ── Phase 1: Ad Retrieval Benchmark ────────────────────────────────────
         print(f"\n=== Phase 1: Benchmarking Ad Retrieval (BGE-M3 on {retrieval_device} + FAISS) ===")
-        t_retrieval_start = time.perf_counter()
-        retrieval_timings_dict = self._run_retrieval_phase(
+        retrieval_timings_dict, t_retrieval_total = self._run_retrieval_phase(
             query_tuples=query_tuples,
             index_dir=index_dir,
             top_k=top_k,
             retrieval_device=retrieval_device,
         )
-        t_retrieval_total = time.perf_counter() - t_retrieval_start
         print(f"Phase 1 complete in {t_retrieval_total:.2f}s ({total_queries / t_retrieval_total:.1f} queries/s)")
 
         if retrieval_only:
@@ -274,7 +293,7 @@ class SpeedComparisonOrchestrator:
                 total_llm_wall_clock_sec=0.0,
                 timestamp=datetime.now(timezone.utc).isoformat(),
             )
-            retrieval_csv = output_csv.parent / f"retrieval_{output_csv.stem}_{run_ts}{output_csv.suffix}"
+            retrieval_csv = target_dir / f"retrieval_{output_csv.name}"
             self._repo.save_retrieval_records(retrieval_records, retrieval_csv)
             self._repo.save_summary(summary, target_summary_json)
             self._print_retrieval_report(summary)
@@ -369,19 +388,26 @@ class SpeedComparisonOrchestrator:
         index_dir: Path,
         top_k: int,
         retrieval_device: str = DEFAULT_RETRIEVAL_DEVICE,
-    ) -> dict[str, QueryRetrievalTiming]:
+    ) -> tuple[dict[str, QueryRetrievalTiming], float]:
         """Loads index and encoder, executes retrieval benchmark, unloads encoder."""
         store = FaissVectorStore(index_dir)
         store.load()
         encoder = BgeM3Encoder(device=retrieval_device)
-        service = RetrievalBenchmarkService(encoder=encoder, store=store)
+        service = RetrievalBenchmarkService(encoder=encoder, store=store, device=retrieval_device)
+
+        if retrieval_device == "cuda" and torch.cuda.is_available():
+            torch.cuda.synchronize()
+        t_start = time.perf_counter()
         timings = service.benchmark_queries(query_tuples, k=top_k)
+        if retrieval_device == "cuda" and torch.cuda.is_available():
+            torch.cuda.synchronize()
+        t_total = time.perf_counter() - t_start
 
         # Unload encoder to free VRAM for Phase 2 vLLM
         del encoder
         del service
         del store
-        return {item.id: item for item in timings}
+        return {item.id: item for item in timings}, t_total
 
     def _compute_summary(
         self,

@@ -173,6 +173,32 @@ class TestSpeedComparisonRepository(unittest.TestCase):
         self.assertEqual(data["mean_speedup_ratio"], 25.0)
         self.assertEqual(data["retrieval_distribution"]["p50"], 10.0)
 
+    def test_run_folder_structure(self) -> None:
+        run_dir = Path(self.test_dir.name) / "run_20261015_000000"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        csv_path = run_dir / "speed_comparison_results.csv"
+        json_path = run_dir / "speed_comparison_summary.json"
+
+        record = QuerySpeedComparisonRecord(
+            id="test-run",
+            query="test folder",
+            retrieval_time_ms=20.0,
+            embed_time_ms=18.0,
+            search_time_ms=2.0,
+            retrieved_ad_id="ad-1",
+            retrieved_ad_score=0.9,
+            llm_time_ms=500.0,
+            prompt_tokens=10,
+            output_tokens=25,
+            tokens_per_sec=50.0,
+            speedup_ratio=25.0,
+            time_delta_ms=480.0,
+            retrieval_finished_first=True,
+        )
+        self.repo.save_records([record], csv_path)
+        self.assertTrue(csv_path.exists())
+        self.assertEqual(csv_path.parent.name, "run_20261015_000000")
+
 
 if __name__ == "__main__":
     unittest.main()

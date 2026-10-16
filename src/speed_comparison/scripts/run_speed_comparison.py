@@ -40,6 +40,12 @@ def parse_args() -> argparse.Namespace:
         help="Path to the FAISS index and ads metadata directory.",
     )
     parser.add_argument(
+        "--run-dir",
+        type=Path,
+        default=None,
+        help="Specific directory for this benchmark run. If not specified, creates 'run_YYYYMMDD_HHMMSS' inside output directory.",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=DEFAULT_OUTPUT_CSV,
@@ -130,6 +136,7 @@ def main() -> None:
         index_dir=args.index_dir,
         output_csv=args.output,
         summary_json=args.summary_output,
+        run_dir=args.run_dir,
         limit=limit,
         batch_size=args.batch_size,
         llm_model=args.llm_model,
