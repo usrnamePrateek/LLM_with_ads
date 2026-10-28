@@ -203,31 +203,12 @@ def _retrieval_only_summary(
     )
 
 
-def _records_from_frame(df: pd.DataFrame) -> list[QuerySpeedComparisonRecord]:
-    """Rebuilds comparison records from a previously saved results CSV."""
-    return [
-        QuerySpeedComparisonRecord(
-            id=str(row["id"]),
-            query=str(row["query"]),
-            retrieval_time_ms=float(row["retrieval_time_ms"]),
-            embed_time_ms=float(row["embed_time_ms"]),
-            search_time_ms=float(row["search_time_ms"]),
-            retrieved_ad_id=str(row["retrieved_ad_id"]),
-            retrieved_ad_score=float(row["retrieved_ad_score"]),
-            llm_time_ms=float(row["llm_time_ms"]),
-            prompt_tokens=int(row["prompt_tokens"]),
-            output_tokens=int(row["output_tokens"]),
-            tokens_per_sec=float(row["tokens_per_sec"]),
-            speedup_ratio=float(row["speedup_ratio"]),
-            time_delta_ms=float(row["time_delta_ms"]),
-            retrieval_finished_first=bool(row["retrieval_finished_first"]),
-        )
-        for _, row in df.iterrows()
-    ]
-
-
 class SpeedComparisonOrchestrator:
-    """Coordinates two-phase benchmark execution, checkpointing, and statistical comparison."""
+    """Coordinates two-phase benchmark execution, incremental result writes, and statistical comparison.
+
+    Every run gets a fresh runs/run_<ts>/ folder and is measured in one sitting; there is no resume, so latencies in a
+    run are never mixed across sessions. A crashed run keeps its partial CSV (no summary) and is simply rerun.
+    """
 
     def __init__(
         self,
@@ -241,7 +222,6 @@ class SpeedComparisonOrchestrator:
         index_dir: Path = DEFAULT_INDEX_DIR,
         output_csv: Path = DEFAULT_OUTPUT_CSV,
         summary_json: Path = DEFAULT_SUMMARY_JSON,
-        run_dir: Path | None = None,
         limit: int | None = 1000,
         llm_model: str = DEFAULT_LLM_MODEL,
         max_model_len: int = DEFAULT_MAX_MODEL_LEN,
@@ -255,11 +235,8 @@ class SpeedComparisonOrchestrator:
     ) -> SpeedBenchmarkSummary:
         """Executes the full two-phase speed benchmark on queries."""
         run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        if run_dir is not None:
-            target_dir = Path(run_dir)
-        else:
-            target_dir = output_csv.parent / f"run_{run_ts}"
-        target_dir.mkdir(parents=True, exist_ok=True)
+        target_dir = output_csv.parent / f"run_{run_ts}"
+        target_dir.mkdir(parents=True, exist_ok=False)
 
         target_output_csv = target_dir / output_csv.name
         target_summary_json = target_dir / summary_json.name
@@ -275,31 +252,13 @@ class SpeedComparisonOrchestrator:
         else:
             frame[ID_COLUMN] = frame[ID_COLUMN].astype(str)
 
-        # 2. Checkpointing: filter out already-processed IDs
-        processed_ids = self._repo.load_processed_ids(target_output_csv)
-        if not processed_ids and output_csv != target_output_csv and output_csv.exists():
-            processed_ids = self._repo.load_processed_ids(output_csv)
-        if processed_ids and not retrieval_only:
-            frame = frame[~frame[ID_COLUMN].isin(processed_ids)].copy()
-
         if limit is not None:
             frame = frame.head(limit).copy()
 
         total_queries = len(frame)
         print(f"Total queries to benchmark: {total_queries:,}")
         if total_queries == 0:
-            print("All queries have already been benchmarked in existing output.")
-            source_csv = target_output_csv if target_output_csv.exists() else output_csv
-            summary = self._compute_summary(
-                records=_records_from_frame(self._repo.load_records(source_csv)),
-                llm_model=llm_model,
-                embedding_model=EMBEDDING_MODEL_NAME,
-                retrieval_device=retrieval_device,
-                retrieval_wall_clock_sec=0.0,
-                llm_wall_clock_sec=0.0,
-            )
-            self.print_report(summary)
-            return summary
+            raise ValueError(f"no queries to benchmark in {queries_path}")
 
         query_tuples = [
             (str(row[ID_COLUMN]), str(row[QUERY_COLUMN]))
@@ -343,7 +302,7 @@ class SpeedComparisonOrchestrator:
 
         all_records: list[QuerySpeedComparisonRecord] = []
         pending_buffer: list[QuerySpeedComparisonRecord] = []
-        wrote_any = len(processed_ids) > 0
+        wrote_any = False
 
         t_llm_start = time.perf_counter()
         for idx, (q_id, q_text) in enumerate(query_tuples, start=1):
