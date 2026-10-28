@@ -38,6 +38,12 @@ if TYPE_CHECKING:
 PreferenceCandidates = Literal["same_category", "cross_category"]
 
 
+def _report_unparsed(count: int) -> None:
+    """Judge answers that failed to parse are not saved, so a resumed run asks the judge again."""
+    if count:
+        print(f"{count:,} judge answers failed to parse (not saved; retried on resume).")
+
+
 def _cell(value: object) -> str:
     """Reads a CSV cell the way place_ads wrote it: missing values become ''."""
     return "" if pd.isna(value) else str(value)
@@ -96,6 +102,7 @@ class ScorePlacementsService:
         all_rows: list[PlacementScore] = []
         buffer: list[PlacementScore] = []
         unmaskable = 0
+        unparsed = 0
         for start in range(0, len(frame), batch_size):
             batch = frame.iloc[start : start + batch_size]
             prompts: list[str] = []
@@ -122,7 +129,8 @@ class ScorePlacementsService:
                     score, reason = parse_placement_score(raw)
                 except (ValueError, TypeError, KeyError) as exc:
                     print(f"  parse fail id={query_id!r} position={position!r}: {exc}")
-                    score, reason = 0, f"parse_error: {exc}"
+                    unparsed += 1
+                    continue
                 buffer.append(
                     PlacementScore(
                         id=query_id,
@@ -145,6 +153,7 @@ class ScorePlacementsService:
             all_rows.extend(buffer)
         if unmaskable:
             print(f"Skipped {unmaskable:,} placements whose ad block could not be masked (not saved; retried on resume).")
+        _report_unparsed(unparsed)
         return all_rows
 
 
@@ -226,6 +235,7 @@ class EvaluateAdPreferenceService:
 
         all_rows: list[PairwisePreferenceScore] = []
         buffer: list[PairwisePreferenceScore] = []
+        unparsed = 0
         for start in range(0, len(pairs), batch_size):
             batch = pairs[start:start + batch_size]
             prompts = [
@@ -239,8 +249,8 @@ class EvaluateAdPreferenceService:
                     winner_ad_id = pair.ad_1.id if winner_tag == "ad_1" else pair.ad_2.id
                 except Exception as exc:
                     print(f"  parse fail query_id={pair.query_id!r}: {exc}")
-                    winner_ad_id = "ERROR"
-                    confidence = f"parse_error: {exc}"
+                    unparsed += 1
+                    continue
                 buffer.append(
                     PairwisePreferenceScore(
                         query_id=pair.query_id,
@@ -261,6 +271,7 @@ class EvaluateAdPreferenceService:
                 all_rows.extend(buffer)
                 buffer = []
 
+        _report_unparsed(unparsed)
         return all_rows
 
 
@@ -345,6 +356,7 @@ class EvaluatePlacementComparisonService:
 
         all_rows: list[PlacementComparisonScore] = []
         buffer: list[PlacementComparisonScore] = []
+        unparsed = 0
         for start in range(0, len(pairs_to_test), batch_size):
             batch = pairs_to_test[start:start + batch_size]
             prompts = [
@@ -358,8 +370,8 @@ class EvaluatePlacementComparisonService:
                     winner_pos = item["pos_1"] if winner_tag == "pos_1" else item["pos_2"]
                 except Exception as exc:
                     print(f"  parse fail query_id={item['query_id']!r}: {exc}")
-                    winner_pos = "ERROR"
-                    confidence = f"parse_error: {exc}"
+                    unparsed += 1
+                    continue
                 buffer.append(
                     PlacementComparisonScore(
                         query_id=item["query_id"],
@@ -381,4 +393,5 @@ class EvaluatePlacementComparisonService:
                 all_rows.extend(buffer)
                 buffer = []
 
+        _report_unparsed(unparsed)
         return all_rows
