@@ -6,9 +6,8 @@ from src.common.shared_config import REPO_ROOT
 DEFAULT_QUERIES_PARQUET = REPO_ROOT / "data/processed/lmarena/dataset/arena_preference_en_single_turn.parquet"
 DEFAULT_INDEX_DIR = REPO_ROOT / "data/processed/ads/index_new"
 DEFAULT_SPEED_COMPARISON_DIR = REPO_ROOT / "data/processed/speed_comparison"
-DEFAULT_OUTPUT_DIR = DEFAULT_SPEED_COMPARISON_DIR
-DEFAULT_OUTPUT_CSV = DEFAULT_OUTPUT_DIR / "speed_comparison_results.csv"
-DEFAULT_SUMMARY_JSON = DEFAULT_OUTPUT_DIR / "speed_comparison_summary.json"
+DEFAULT_OUTPUT_CSV = DEFAULT_SPEED_COMPARISON_DIR / "speed_comparison_results.csv"
+DEFAULT_SUMMARY_JSON = DEFAULT_SPEED_COMPARISON_DIR / "speed_comparison_summary.json"
 
 DEFAULT_NUM_QUERIES = 1000
 DEFAULT_TOP_K = 1

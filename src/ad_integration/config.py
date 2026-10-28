@@ -18,7 +18,6 @@ ID_COLUMN = "id"
 LLM_RESPONSE_COLUMN = "llm_response"
 AD_POSITIONS = ("first", "middle", "last", "semantic")
 TOP_K = 1
-ENCODE_BATCH_SIZE = 32
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 0
 

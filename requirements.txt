@@ -6,12 +6,9 @@ transformers
 faiss-cpu
 langchain-text-splitters
 # vLLM is intentionally not installed from this file (PyPI wheel is CUDA 13).
-hdbscan
 cuml-cu12==25.10.0
 cupy-cuda12x==13.6.0
 scikit-learn==1.6.1
-umap-learn
 matplotlib
 tqdm
-google-genai
 python-dotenv
