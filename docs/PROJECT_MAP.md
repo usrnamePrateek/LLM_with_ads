@@ -73,8 +73,12 @@ All paths below are under `src/` unless noted.
 - **ad_integration**: `core/placement.py`, `core/splitting.py` and `core/semantic.py` stay pure (no I/O).
   New position: add it to `AD_POSITIONS` in `config.py` and handle it in `place_ad()`. Splitting must not raise on
   empty text, missing punctuation or escaped whitespace (`\\n`, `\\t`).
-- **ad_evaluation**: `core/masking.py::mask_ad_in_response` replaces the ad block with `[ad slot]` and the ad text
-  is passed separately, so the judge rates *where* the ad sits, not how it reads inline. Pairwise judges run both
+- **ad_evaluation**: `core/masking.py::mask_ad_in_response` replaces the exact ad block with `[ad slot]` and the ad text
+  is passed separately, so the judge rates *where* the ad sits, not how it reads inline. Masking is strict: if the
+  rebuilt block is not in the response it raises `AdBlockNotFoundError`, and the judge services skip that row/pair,
+  print a count, and do not save it (so resume retries it). There is no fuzzy fallback on purpose: the old regex
+  could delete answer text when the response had its own `---`/`#`/`###` markdown. Read ad fields with `_cell`
+  (NaN -> ''), matching how `place_ads` built the block. Pairwise judges run both
   orders of every pair to cancel position bias. Imports `ad_integration.core.placement` (to rebuild the ad block),
   `ad_generation.llm.parsing.extract_json_value`, and `ad_indexing.repository.JsonlAdRepository` (category grouping).
   `services.py` takes judges by injection and does not import vLLM at load time.
@@ -145,8 +149,10 @@ Resume keys: assign_top_ads `id`; score_placements `(id, ad_id, position)`; pref
 `(query_id, ad_1_id, ad_2_id, is_swapped)`; placement comparison `(query_id, ad_id, pos_1, pos_2, is_swapped)`
 (the last two via `common.io.load_done_keys`); speed_comparison `id` (only with explicit `--run-dir`); categories merge by `id`.
 
-## Fragile areas and known bugs (not fixed; behavior kept as-is on purpose)
-- `mask_ad_in_response` returns the response UNMASKED if neither exact match nor regex matches, so the ad can leak to the judge
+## Fragile areas and known bugs
+- Masking (fixed 2026-10-29): the regex fallback could cut answer text, and placement comparison read an empty CTA as
+  "nan". An audit of `generation/bulk_ads/` (146,316 placed responses) found 100% exact matches and no empty CTAs,
+  so existing judge results were not affected
 - Parse failures are saved as completed rows (score 0 / "ERROR"), so resume never retries them
 - `place_ads` has no resume and deletes outputs at start; a crash loses the run
 - Resume code with missing columns or unreadable files can silently overwrite the existing output (assign_top_ads, preference services)
