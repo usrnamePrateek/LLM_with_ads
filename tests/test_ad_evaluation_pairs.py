@@ -7,11 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.ad_evaluation.repository import PlacementComparisonScoreCsvRepository, PreferenceScoreCsvRepository
-from src.ad_evaluation.services import (
-    EvaluateAdPreferenceService,
-    EvaluateCrossCategoryAdPreferenceService,
-    EvaluatePlacementComparisonService,
-)
+from src.ad_evaluation.services import EvaluateAdPreferenceService, EvaluatePlacementComparisonService
 
 ADS = [
     {"domain": "A", "ad_id": 1, "headline": "a1", "description": "d", "cta": "c", "category": "cat_a"},
@@ -45,8 +41,7 @@ class StubJudge:
 
 
 def _make_preference_service(mode: str, judge: StubJudge):
-    service_cls = EvaluateAdPreferenceService if mode == "same_category" else EvaluateCrossCategoryAdPreferenceService
-    return service_cls(writer=PreferenceScoreCsvRepository(), judge=judge)
+    return EvaluateAdPreferenceService(writer=PreferenceScoreCsvRepository(), judge=judge, candidates=mode)
 
 
 class PreferencePairTests(unittest.TestCase):

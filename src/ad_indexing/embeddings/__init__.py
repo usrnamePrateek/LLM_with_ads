@@ -1,4 +1,1 @@
-from src.ad_indexing.embeddings.base import EmbeddingEncoder
-from src.ad_indexing.embeddings.bge_m3 import BgeM3Encoder
-
-__all__ = ["EmbeddingEncoder", "BgeM3Encoder"]
+"""Embedding encoders (protocol in base.py, BGE-M3 implementation in bge_m3.py)."""
