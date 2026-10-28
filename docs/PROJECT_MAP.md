@@ -39,7 +39,8 @@ All paths below are under `src/` unless noted.
    -> `lmarena/dataset/arena_preference_en_single_turn.parquet` (id, model, query, llm_response, timestamp)
 2. (legacy, not in the pipeline) `ad_generation/old/generate_categories.py` -> Qwen3-32B query categories
    -> `lmarena/old/lmarena_query_qwen3_categories.csv` (+ domain, intent, commercial_intent). Nothing downstream reads it.
-3. `generate_bulk_ads.py` -> `GenerateBulkAdsService` + `VllmBulkAdGenerator`: reads `lmarena/taxonomy_subtopics.csv`,
+3. `generate_bulk_ads.py` -> `GenerateBulkAdsService` + `VllmBulkAdGenerator`: reads `ad_topics/taxonomy_subtopics.csv`
+   (exported by `analysis/ads_domain/new/google_topics_api.ipynb`),
    `--target-ads` default 1000, APPENDS to `ads_index/ads.jsonl`, resumes from per-domain counts
    - ad record: domain, ad_id, headline, description, cta, category, subtopic
 4. `ad_indexing/scripts/build_index.py` -> `IndexAdsService` -> `ads_index/index_new/index.faiss` + `ads.json` sidecar
