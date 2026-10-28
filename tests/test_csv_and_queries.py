@@ -7,7 +7,7 @@ import pandas as pd
 
 from src.ad_evaluation.entities import PlacementScore
 from src.ad_evaluation.repository import PlacementScoreCsvRepository
-from src.ad_generation.repository import QueryFrameRepository
+from src.ad_generation.old.categories import QueryFrameRepository
 from src.ad_integration.repository import QueryDatasetRepository
 
 

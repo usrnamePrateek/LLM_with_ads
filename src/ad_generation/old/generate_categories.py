@@ -1,22 +1,26 @@
-"""Script entry point for categorizing LMSYS Chatbot Arena queries using an LLM."""
+"""Legacy script: categorize LMArena queries by domain/intent with an LLM.
+
+Run: ./run_vllm.sh -m src.ad_generation.old.generate_categories
+"""
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
 
-from src.ad_generation.config import (
+from src.ad_generation.old.categories import (
     CATEGORY_BATCH_SIZE,
     CATEGORY_COLUMNS,
     CATEGORY_GPU_MEMORY_UTILIZATION,
     CATEGORY_MAX_MODEL_LEN,
     CATEGORY_MODEL_NAME,
     DEFAULT_CATEGORIES_OUTPUT,
-    DEFAULT_QUERIES_INPUT,
     QUERY_COLUMN,
+    CategorizeQueriesService,
+    QueryFrameRepository,
+    row_already_categorized,
 )
-from src.ad_generation.llm.category_generator import VllmCategoryGenerator
-from src.ad_generation.repository import QueryFrameRepository
-from src.ad_generation.services import CategorizeQueriesService, row_already_categorized
+from src.ad_generation.old.category_generator import VllmCategoryGenerator
+from src.common.shared_config import DEFAULT_QUERIES_INPUT
 
 
 def parse_args() -> argparse.Namespace:

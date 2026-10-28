@@ -4,8 +4,7 @@ from __future__ import annotations
 import json
 import re
 
-from src.ad_generation.config import CATEGORY_COLUMNS
-from src.ad_generation.entities import AdCreative, QueryCategory
+from src.ad_generation.entities import AdCreative
 from src.common.text import strip_thinking
 
 
@@ -21,32 +20,6 @@ def extract_json_value(raw: str) -> dict | list | str | int | float | bool | Non
         if not match:
             raise
         return json.loads(match.group(0))
-
-
-def parse_category(raw: str) -> QueryCategory:
-    """Validates and parses a raw JSON string into a QueryCategory domain object."""
-    payload = extract_json_value(raw)
-    if isinstance(payload, dict) and "results" in payload and payload["results"]:
-        payload = payload["results"][0]
-    if not isinstance(payload, dict):
-        raise ValueError("response is not a JSON object")
-    extra = set(payload) - set(CATEGORY_COLUMNS)
-    missing = [k for k in CATEGORY_COLUMNS if k not in payload]
-    if extra or missing:
-        raise ValueError(f"unexpected fields extra={sorted(extra)} missing={missing}")
-
-    domain = str(payload["domain"]).strip()
-    intent = str(payload["intent"]).strip()
-    commercial_intent = payload["commercial_intent"]
-    if isinstance(commercial_intent, str) and commercial_intent.strip().isdigit():
-        commercial_intent = int(commercial_intent.strip())
-    if not isinstance(commercial_intent, int) or isinstance(commercial_intent, bool):
-        raise ValueError("commercial_intent must be an integer")
-    if commercial_intent not in (0, 1, 2, 3):
-        raise ValueError("commercial_intent must be 0-3")
-    if not domain or not intent:
-        raise ValueError("domain and intent must be non-empty")
-    return QueryCategory(domain=domain, intent=intent, commercial_intent=commercial_intent)
 
 
 def parse_bulk_ad_creatives(raw: str) -> list[AdCreative]:

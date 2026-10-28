@@ -9,7 +9,7 @@ The project is broken down into four main modules, executed sequentially, plus a
 ### 1. `ad_generation/` (Data Preparation)
 Prepares the base dataset and generates the synthetic advertisements.
 - **`scripts/prepare_dataset.py`**: Downloads and formats the LMArena human preference dataset.
-- **`scripts/generate_categories.py`**: Uses an LLM to categorize queries by domain, intent, and commercial intent.
+- **`old/generate_categories.py`** (legacy, not in the pipeline): LLM query categorization by domain, intent, and commercial intent. See `src/ad_generation/README.md`.
 - **`scripts/generate_bulk_ads.py`**: Generates synthetic ad creatives (headlines, descriptions, CTAs) per taxonomy sub-topic and appends them to `ads.jsonl`; resumable.
 
 ### 2. `ad_indexing/` (Vector Search)
