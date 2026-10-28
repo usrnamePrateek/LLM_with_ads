@@ -17,11 +17,11 @@ from src.ad_indexing.embeddings.bge_m3 import BgeM3Encoder
 from src.ad_indexing.store.base import VectorStore
 from src.ad_indexing.store.faiss_store import FaissVectorStore
 from src.common.io import load_queries
+from src.common.shared_config import DEFAULT_INDEX_DIR
 from src.common.shared_llm import BaseVllmGenerator
 from src.speed_comparison.config import (
     CHECKPOINT_EVERY,
     DEFAULT_GPU_MEMORY_UTILIZATION,
-    DEFAULT_INDEX_DIR,
     DEFAULT_LLM_MODEL,
     DEFAULT_MAX_MODEL_LEN,
     DEFAULT_MAX_NEW_TOKENS,
