@@ -11,5 +11,5 @@ from src.common.shared_config import (
     REPO_ROOT,
 )
 
-TAXONOMY_CSV_PATH = REPO_ROOT / "data/processed/lmarena/taxonomy_subtopics.csv"
+TAXONOMY_CSV_PATH = REPO_ROOT / "data/processed/ad_topics/taxonomy_subtopics.csv"
 MAX_ADS_PER_PROMPT = 5

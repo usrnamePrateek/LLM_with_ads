@@ -9,7 +9,8 @@ Prepares the LMArena dataset and generates the synthetic ad catalog.
 | `scripts/prepare_dataset.py` | Downloads `lmarena-ai/arena-human-preference-140k`, keeps English single-turn conversations, picks the winning response | `data/processed/lmarena/dataset/arena_preference_en_single_turn.parquet` |
 | `scripts/generate_bulk_ads.py` | Generates ad creatives (headline, description, CTA) per taxonomy sub-topic with Llama-3.3-70B; resumable, appends | `data/processed/ads_index/ads.jsonl` |
 
-Input for bulk ads: `data/processed/lmarena/taxonomy_subtopics.csv`.
+Input for bulk ads: `data/processed/ad_topics/taxonomy_subtopics.csv`, exported by
+`analysis/ads_domain/new/google_topics_api.ipynb` from the Topics API taxonomy.
 The ad `category` field (the taxonomy topic) is what `ad_evaluation` groups ads by.
 
 ## Legacy: `old/`
