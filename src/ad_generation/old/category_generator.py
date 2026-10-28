@@ -6,13 +6,14 @@ from src.common.env import prepend_venv_bin_to_path
 prepend_venv_bin_to_path()
 
 from src.common.shared_llm import BaseVllmGenerator
-from src.ad_generation.config import (
+from src.ad_generation.old.categories import (
     CATEGORY_GPU_MEMORY_UTILIZATION,
+    CATEGORY_JSON_SCHEMA,
     CATEGORY_MAX_MODEL_LEN,
     CATEGORY_MAX_NEW_TOKENS,
     CATEGORY_MODEL_NAME,
+    CATEGORY_SYSTEM_PROMPT,
 )
-from src.ad_generation.llm.prompts import CATEGORY_JSON_SCHEMA, CATEGORY_SYSTEM_PROMPT
 
 
 class VllmCategoryGenerator(BaseVllmGenerator):

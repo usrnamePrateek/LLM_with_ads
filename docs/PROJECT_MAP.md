@@ -18,7 +18,8 @@ User: the repo owner (research / thesis-style work; analysis in notebooks). GPU 
   `shared_config.py` (paths/models used by several modules), `shared_llm.py` (`BaseVllmGenerator`),
   `io.py` (`load_queries`, `save_rows`, `load_done_keys`), `text.py` (`strip_thinking`),
   `env.py` (`prepend_venv_bin_to_path`)
-- `src/ad_generation/` dataset prep, query categorization, ad generation, prompts, JSON parsing
+- `src/ad_generation/` dataset prep, ad generation, prompts, JSON parsing; `old/` holds the legacy query
+  categorization step (see `src/ad_generation/README.md`)
 - `src/ad_indexing/` BGE-M3 encoder, FAISS store, index build / query CLI
 - `src/ad_integration/` top-ad assignment and ad placement into responses
 - `src/ad_evaluation/` LLM judges (placement score, ad preference same/cross category, placement comparison)
@@ -36,8 +37,8 @@ All paths below are under `src/` unless noted.
 ## Data flow (files are the interfaces; paths under `data/processed/`)
 1. `ad_generation/scripts/prepare_dataset.py` -> `PrepareArenaDatasetService.run`
    -> `lmarena/dataset/arena_preference_en_single_turn.parquet` (id, model, query, llm_response, timestamp)
-2. `generate_categories.py` -> `CategorizeQueriesService` + `VllmCategoryGenerator` (Qwen3-32B)
-   -> `lmarena/lmarena_query_qwen3_categories.csv` (+ domain, intent, commercial_intent)
+2. (legacy, not in the pipeline) `ad_generation/old/generate_categories.py` -> Qwen3-32B query categories
+   -> `lmarena/old/lmarena_query_qwen3_categories.csv` (+ domain, intent, commercial_intent). Nothing downstream reads it.
 3. `generate_bulk_ads.py` -> `GenerateBulkAdsService` + `VllmBulkAdGenerator`: reads `lmarena/taxonomy_subtopics.csv`,
    `--target-ads` default 1000, APPENDS to `ads_index/ads.jsonl`, resumes from per-domain counts
    - ad record: domain, ad_id, headline, description, cta, category, subtopic
@@ -64,9 +65,9 @@ All paths below are under `src/` unless noted.
 - **common**: infrastructure only, no business logic, and it must not import feature modules.
   `BaseVllmGenerator` handles vLLM setup, chat template (`enable_thinking=False` fallback), truncation of user
   content to `max_model_len - max_new_tokens`, and `strip_thinking` on output. Changing truncation affects every
-  generator (`VllmCategoryGenerator`, `VllmBulkAdGenerator`, the judges, `VllmBenchmarkGenerator`).
+  generator (`VllmBulkAdGenerator`, the judges, `VllmBenchmarkGenerator`, legacy `old/VllmCategoryGenerator`).
 - **ad_generation**: LLM parsing (`llm/parsing.py`) must tolerate malformed JSON; one bad row never crashes a batch.
-  Category generation appends incrementally and skips done ids. The ad `category` field drives evaluation grouping.
+  The ad `category` field (taxonomy topic) drives evaluation grouping. `old/` is legacy: do not add dependencies on it.
 - **ad_indexing**: no placement or business logic. Other modules use the `VectorStore` / `EmbeddingEncoder`
   protocols (`store/base.py`, `embeddings/base.py`), never FAISS directly; import concrete classes from their
   submodules (`embeddings.bge_m3`, `store.faiss_store`), as the package `__init__`s are intentionally empty.
@@ -118,7 +119,7 @@ Running vLLM and BGE-M3 on one GPU at once can OOM, so `run()` is phased:
 | Use | Value |
 |---|---|
 | Ad gen + placement judge | `nvidia/Llama-3.3-70B-Instruct-FP8` (ads: len 4096, 1000 tok, gpu 0.95; judge: len 16384, 256 tok, batch 128, checkpoint 1000) |
-| Categorization | `Qwen/Qwen3-32B` (batch 32, len 32768, 3 retries, gpu 0.90) |
+| Categorization (legacy) | `Qwen/Qwen3-32B` (batch 32, len 32768, 3 retries, gpu 0.90) |
 | Placement comparison judge | `deepseek-ai/DeepSeek-R1-Distill-Qwen-32B` (len 131072, 4096 tok, batch 32, fp8 hardcoded) |
 | Embeddings | `BAAI/bge-m3`, `IndexFlatIP`, top-k 5 (indexing default) / 1 (integration) |
 | Speed bench | 1000 queries, 512 new tokens, temp 0, shared `DEFAULT_INDEX_DIR` (`ads_index/index_new`) |
@@ -133,7 +134,7 @@ Ad generation sampling: temp 0.7, top_p 0.8, top_k 20.
 
 ## Run, test, debug
 - From repo root: `./run_vllm.sh -m src.<module>.scripts.<name> [args]` (`unset LD_LIBRARY_PATH`, runs `.lmarena-env/bin/python`; relative path, so must run from root)
-- Typical order: prepare_dataset -> generate_categories -> generate_bulk_ads -> build_index -> assign_top_ads -> place_ads -> evaluation scripts
+- Typical order: prepare_dataset -> generate_bulk_ads -> build_index -> assign_top_ads -> place_ads -> evaluation scripts
 - Most scripts accept `--limit N`; use it for smoke runs
 - Tests: `./run_vllm.sh -m unittest discover -s tests -t .`. No pytest/lint/typecheck configured.
   Tests must not hit network/GPU; `test_speed_services.py` imports torch (CPU only, ~5 s)

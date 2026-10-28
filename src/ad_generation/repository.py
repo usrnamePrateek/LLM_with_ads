@@ -1,4 +1,4 @@
-"""Repository classes for loading datasets, merging checkpoints, and saving generated JSON/CSV data."""
+"""Repository classes for reading the taxonomy and appending generated ads to JSONL."""
 
 from __future__ import annotations
 
@@ -8,49 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.ad_generation.config import CATEGORY_COLUMNS, QUERY_COLUMN
 from src.ad_generation.entities import AdRecord
-from src.common.io import load_queries
-
-
-class QueryFrameRepository:
-    """Repository for reading and checkpointing pandas DataFrames containing user queries."""
-
-    def load(self, path: Path, query_column: str = QUERY_COLUMN) -> pd.DataFrame:
-        """Loads a Parquet or CSV file containing queries, filtering out rows with missing query data."""
-        return load_queries(path, query_column)
-
-    def merge_checkpoint(self, checkpoint_path: Path, source_df: pd.DataFrame) -> pd.DataFrame:
-        """Merges previously categorized query rows from a CSV checkpoint to resume interrupted batch generation jobs."""
-        if not checkpoint_path.exists():
-            return source_df
-
-        resumed = pd.read_csv(checkpoint_path)
-        print(f"Loaded checkpoint ({len(resumed):,} rows): {checkpoint_path}")
-        out = source_df.copy()
-        for col in CATEGORY_COLUMNS:
-            if col not in out.columns:
-                out[col] = pd.NA
-
-        label_cols = [c for c in CATEGORY_COLUMNS if c in resumed.columns]
-        if not label_cols:
-            return out
-
-        if "id" in out.columns and "id" in resumed.columns:
-            ckpt = resumed[["id"] + label_cols].drop_duplicates(subset=["id"], keep="last")
-            out = out.drop(columns=label_cols).merge(ckpt, on="id", how="left")
-        else:
-            n = min(len(out), len(resumed))
-            for col in label_cols:
-                out.iloc[:n, out.columns.get_loc(col)] = resumed[col].iloc[:n].to_numpy()
-        return out
-
-    def save_csv(self, frame: pd.DataFrame, path: Path) -> None:
-        """Saves a pandas DataFrame to CSV, creating parent directories if needed."""
-        path.parent.mkdir(parents=True, exist_ok=True)
-        frame.to_csv(path, index=False)
-        print(f"  checkpoint saved: {path}")
-
 
 
 class AdJsonlRepository:
