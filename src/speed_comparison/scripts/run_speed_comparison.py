@@ -6,7 +6,6 @@ from pathlib import Path
 
 from src.speed_comparison.config import (
     CHECKPOINT_EVERY,
-    DEFAULT_BATCH_SIZE,
     DEFAULT_GPU_MEMORY_UTILIZATION,
     DEFAULT_INDEX_DIR,
     DEFAULT_LLM_MODEL,
@@ -62,12 +61,6 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_NUM_QUERIES,
         help="Number of queries to benchmark (default: 1000). Set to -1 or 0 for unlimited.",
-    )
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=DEFAULT_BATCH_SIZE,
-        help="Batch size for benchmarking (default: 1 for single-stream interactive latency).",
     )
     parser.add_argument(
         "--llm-model",
@@ -138,7 +131,6 @@ def main() -> None:
         summary_json=args.summary_output,
         run_dir=args.run_dir,
         limit=limit,
-        batch_size=args.batch_size,
         llm_model=args.llm_model,
         max_model_len=args.max_model_len,
         max_new_tokens=args.max_new_tokens,
