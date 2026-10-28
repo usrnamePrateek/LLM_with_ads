@@ -54,6 +54,7 @@ All paths below are under `src/` unless noted.
    `ad_integration/bulk_ads/query_semantic_paragraphs.csv`. NO resume: it deletes both outputs first.
 7. `ad_evaluation/scripts/`:
    - `score_placements.py` -> `ScorePlacementsService` + `VllmPlacementJudge` -> `ad_evaluation/placement_scores.csv` (score 1-5, reason)
+     (the earlier full run, 146,316 rows, is archived in `data/evaluation/old/placement_scores.csv`; see its readme)
    - `run_preference_eval.py` / `run_cross_category_eval.py` -> one `EvaluateAdPreferenceService`
      with `candidates="same_category"` / `"cross_category"`; assigned ad vs each candidate ad, both orders
      -> `data/evaluation/preference_scores.csv` / `data/evaluation/cross_category_preference_scores.csv`
