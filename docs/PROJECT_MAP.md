@@ -51,7 +51,9 @@ All paths below are under `src/` unless noted.
    All integration/evaluation defaults live under `ad_integration/bulk_ads/` (`ad_integration/old/` holds legacy outputs).
 6. `place_ads.py` -> `PlaceAdsInResponsesService`: inner-join dataset and assignments on `id`; 4 rows per query
    -> `ad_integration/bulk_ads/query_ad_positions.csv` (id, query, ad_id, position, response_with_ad) and
-   `ad_integration/bulk_ads/query_semantic_paragraphs.csv`. NO resume: it deletes both outputs first.
+   `ad_integration/bulk_ads/query_semantic_paragraphs.csv`. No resume (a rerun starts over), but it writes
+   `*.partial.csv` and swaps them in only on success, so a crash keeps the previous outputs. `--limit` against the
+   default outputs is refused; pass `--output`/`--semantic-output` for test runs.
 7. `ad_evaluation/scripts/`:
    - `score_placements.py` -> `ScorePlacementsService` + `VllmPlacementJudge` -> `data/evaluation/ad_placement_eval/placement_scores.csv` (score 1-5, reason)
      (the earlier full run, 146,316 rows, is archived in `data/evaluation/ad_placement_eval/old/placement_scores.csv`; see its readme)
@@ -160,8 +162,10 @@ Resume keys: assign_top_ads `id`; score_placements `(id, ad_id, position)`; pref
   so existing judge results were not affected
 - Parse failures (fixed 2026-10-29) used to be saved as rows (score 0 / "ERROR") and never retried. Existing data:
   2 such rows in the archived `ad_placement_eval/old/placement_scores.csv`, none in the pairwise results
-- `place_ads` has no resume and deletes outputs at start; a crash loses the run
-- Resume code with missing columns or unreadable files can silently overwrite the existing output (assign_top_ads, preference services)
+- `place_ads` (fixed 2026-10-29) used to delete its outputs before running, so a crash or a `--limit` test lost them
+- Resume (fixed 2026-10-29): an unreadable existing output, or one missing its key columns, used to be treated as
+  "nothing done" and overwritten. `common.io.read_checkpoint` now raises `CheckpointError` and leaves it untouched
+  (assign_top_ads, preference/placement-comparison judges, speed benchmark)
 - `FaissVectorStore.load` (`store/faiss_store.py`) rebuilds `Ad` without `category` (sidecar has it, load ignores it).
   Low impact today: `ad_evaluation` reads categories from `ads.jsonl`, not from the loaded store
 - Bulk generation appends to `ads.jsonl`; hand-editing or double-appending can produce duplicate ids, and `JsonlAdRepository.load` raises on duplicates

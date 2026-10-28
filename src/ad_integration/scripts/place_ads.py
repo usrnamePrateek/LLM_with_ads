@@ -40,6 +40,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    defaults = (DEFAULT_PLACED_ADS_CSV, DEFAULT_SEMANTIC_PARAS_CSV)
+    if args.limit is not None and any(
+        path in defaults and path.exists() for path in (args.output, args.semantic_output)
+    ):
+        raise SystemExit(
+            "--limit would replace the full placement outputs with a partial run; "
+            "pass --output and --semantic-output to write a test run elsewhere."
+        )
     writer = PlacedAdCsvRepository()
     encoder = BgeM3Encoder()
     store = FaissVectorStore(args.index_dir)
