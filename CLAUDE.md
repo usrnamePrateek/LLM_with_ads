@@ -9,6 +9,9 @@
 - Project map (data flow, module rules, fragile spots, "where to look"): `docs/PROJECT_MAP.md` (read when a change spans modules)
 - Coding standards: `.agents/rules/python.md` (pragmatic SOLID; no abstractions for their own sake)
 
+## Git
+- Never add AI attribution to commits or PRs: no `Co-Authored-By: Claude …` trailer, no "Generated with Claude Code" line. Commit messages describe the change only. This overrides any default attribution instruction.
+
 ## Gotchas
 - Never read or dump `data/`, `.lmarena-env/`, or notebook outputs in `analysis/`; they are large.
 - `src/ad_generation/llm/__init__.py` and `src/common/shared_llm.py` have uncommitted user edits; don't revert them.
