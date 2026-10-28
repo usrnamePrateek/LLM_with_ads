@@ -84,7 +84,7 @@ Prefer straightforward Python code over unnecessary design-pattern-heavy code.
 
 ## Refactoring Rules
 When modifying existing code:
-* First understand the existing architecture (consult `docs/architecture.md`).
+* First understand the existing architecture (consult `docs/PROJECT_MAP.md`).
 * Prefer incremental refactoring.
 * Do not rewrite working code unnecessarily.
 * Preserve existing behavior unless the task explicitly requires changing it.
@@ -97,7 +97,7 @@ When modifying existing code:
 ## Important Agent Behavior
 Before making architectural changes:
 1. Read `AGENTS.md`.
-2. Read `docs/architecture.md` when the change affects multiple modules or system design.
+2. Read `docs/PROJECT_MAP.md` when the change affects multiple modules or system design.
 3. Check these Python rules.
 4. Inspect existing implementations before introducing new abstractions.
 5. Reuse existing patterns and abstractions when appropriate.
