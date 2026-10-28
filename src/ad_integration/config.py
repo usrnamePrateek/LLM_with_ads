@@ -11,7 +11,7 @@ from src.common.shared_config import (
 
 DEFAULT_QUERIES_PARQUET = REPO_ROOT / "data/processed/lmarena/dataset/arena_preference_en_single_turn.parquet"
 DEFAULT_SEMANTIC_PARAS_CSV = (
-    REPO_ROOT / "data/processed/generation/query_semantic_paragraphs.csv"
+    REPO_ROOT / "data/processed/generation/bulk_ads/query_semantic_paragraphs.csv"
 )
 QUERY_COLUMN = "query"
 ID_COLUMN = "id"

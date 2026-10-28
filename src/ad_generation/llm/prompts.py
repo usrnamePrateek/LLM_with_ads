@@ -14,29 +14,6 @@ CATEGORY_JSON_SCHEMA = {
     "additionalProperties": False,
 }
 
-AD_JSON_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "ads": {
-            "type": "array",
-            "minItems": 2,
-            "maxItems": 2,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "headline": {"type": "string"},
-                    "description": {"type": "string"},
-                    "cta": {"type": "string"},
-                },
-                "required": ["headline", "description", "cta"],
-                "additionalProperties": False,
-            },
-        }
-    },
-    "required": ["ads"],
-    "additionalProperties": False,
-}
-
 CATEGORY_SYSTEM_PROMPT = """You classify a single user query for advertising relevance.
 
 Return ONLY a JSON object with exactly these fields:
@@ -103,25 +80,6 @@ Explicit purchasing/booking/hiring/finding-provider requests generally get 3.
 Creative writing and general knowledge generally get 0.
 """
 
-
-def build_ad_prompt(domain: str) -> str:
-    return f"""
-Generate exactly 2 textual advertisements for this domain:
-
-Domain: {domain}
-
-Requirements:
-- The two advertisements must use different advertising angles.
-- Keep them concise and natural.
-- Make them persuasive but not spammy.
-- Do not invent specific brands, prices, discounts, statistics,
-  guarantees, or product features.
-- Advertisement 1 should use a direct, benefit-focused angle.
-- Advertisement 2 should use a different angle such as lifestyle,
-  convenience, problem-solution, urgency, trust, or emotional appeal.
-
-Generate only the requested advertisement data.
-"""
 
 BULK_AD_JSON_SCHEMA = {
     "type": "object",

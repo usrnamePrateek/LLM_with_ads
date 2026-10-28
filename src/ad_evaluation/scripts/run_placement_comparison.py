@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 
 from src.ad_evaluation.config import (
+    DEFAULT_ADS_CSV,
+    DEFAULT_POSITIONS_CSV,
     PLACEMENT_JUDGE_BATCH_SIZE,
     PLACEMENT_JUDGE_GPU_MEMORY_UTILIZATION,
     PLACEMENT_JUDGE_MAX_MODEL_LEN,
@@ -23,13 +25,13 @@ def main() -> int:
     parser.add_argument(
         "--positions", 
         type=Path, 
-        default=Path("data/processed/generation/bulk_ads/query_ad_positions.csv"),
+        default=DEFAULT_POSITIONS_CSV,
         help="Path to the generated responses with ad placements."
     )
     parser.add_argument(
         "--ads", 
         type=Path, 
-        default=Path("data/processed/generation/bulk_ads/query_top1_ads.csv"),
+        default=DEFAULT_ADS_CSV,
         help="Path to the assignments to get ad headline/description/cta."
     )
     parser.add_argument(

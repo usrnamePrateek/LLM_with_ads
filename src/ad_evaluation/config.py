@@ -8,8 +8,8 @@ from src.common.shared_config import (
     REPO_ROOT,
 )
 
-DEFAULT_POSITIONS_CSV = REPO_ROOT / "data/processed/generation/query_ad_positions.csv"
-DEFAULT_ADS_CSV = REPO_ROOT / "data/processed/generation/query_top1_ads.csv"
+DEFAULT_POSITIONS_CSV = REPO_ROOT / "data/processed/generation/bulk_ads/query_ad_positions.csv"
+DEFAULT_ADS_CSV = REPO_ROOT / "data/processed/generation/bulk_ads/query_top1_ads.csv"
 DEFAULT_SCORES_CSV = REPO_ROOT / "data/processed/ad_evaluation/placement_scores.csv"
 
 JUDGE_MODEL_NAME = "nvidia/Llama-3.3-70B-Instruct-FP8"

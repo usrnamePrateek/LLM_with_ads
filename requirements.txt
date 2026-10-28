@@ -5,8 +5,7 @@ sentence-transformers
 transformers
 faiss-cpu
 langchain-text-splitters
-# vLLM: do not install from this file (PyPI wheel is CUDA 13).
-# Use docs/requirements-vllm.txt instead.
+# vLLM is intentionally not installed from this file (PyPI wheel is CUDA 13).
 hdbscan
 cuml-cu12==25.10.0
 cupy-cuda12x==13.6.0

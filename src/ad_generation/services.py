@@ -19,11 +19,10 @@ from src.ad_generation.config import (
     QUERY_COLUMN,
     QUERY_LOG_CHARS,
 )
-from src.ad_generation.llm.ad_generator import VllmAdGenerator
 from src.ad_generation.llm.base import TextGenerator
 from src.ad_generation.entities import AdRecord, QueryCategory
-from src.ad_generation.llm.parsing import parse_ad_creatives, parse_category
-from src.ad_generation.repository import AdJsonlRepository, QueryFrameRepository, TextDomainRepository
+from src.ad_generation.llm.parsing import parse_category
+from src.ad_generation.repository import AdJsonlRepository, QueryFrameRepository
 
 
 def row_already_categorized(row: pd.Series) -> bool:
@@ -165,44 +164,6 @@ class CategorizeQueriesService:
         already = out.apply(row_already_categorized, axis=1).sum()
         print(f"Categorized rows: {int(already):,}")
         return out
-
-
-class GenerateAdsService:
-    """Orchestrates the batch generation of synthetic ad creatives for a given list of domains."""
-    def __init__(
-        self,
-        domains: TextDomainRepository,
-        generator: VllmAdGenerator,
-        writer: AdJsonlRepository,
-    ) -> None:
-        self._domains = domains
-        self._generator = generator
-        self._writer = writer
-
-    def run(self) -> list[AdRecord]:
-        """Loads domains, generates ad copy via an LLM, parses the creatives, and persists them."""
-        domains = self._domains.load()
-        raw_outputs = self._generator.generate_for_domains(domains)
-        records: list[AdRecord] = []
-        for domain, text in zip(domains, raw_outputs):
-            try:
-                creatives = parse_ad_creatives(text)
-            except Exception as exc:
-                print(f"Failed for {domain}: {exc}")
-                print(f"Raw output: {text}")
-                continue
-            for ad_id, creative in enumerate(creatives, start=1):
-                records.append(
-                    AdRecord(
-                        domain=domain,
-                        ad_id=ad_id,
-                        headline=creative.headline,
-                        description=creative.description,
-                        cta=creative.cta,
-                    )
-                )
-        self._writer.save(records)
-        return records
 
 
 class PrepareArenaDatasetService:

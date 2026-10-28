@@ -13,4 +13,4 @@ All LLM generators inherit from this class. It handles:
 - Chat template application with `enable_thinking=False` fallback
 - Token truncation: trims user content to fit `max_model_len - max_new_tokens`
 
-Changes to truncation logic affect every generator in the project (`VllmCategoryGenerator`, `VllmAdGenerator`, `VllmPlacementJudge`).
+Changes to truncation logic affect every generator in the project (`VllmCategoryGenerator`, `VllmBulkAdGenerator`, `VllmPlacementJudge`).

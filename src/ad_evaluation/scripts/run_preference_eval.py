@@ -21,7 +21,7 @@ def parse_args() -> argparse.Namespace:
         description="Score ad preferences pairwise with Llama 3.3 70B (vLLM)."
     )
     # The default assignments path
-    parser.add_argument("--assignments", type=Path, default=Path("data/processed/generation/bulk_ads/query_top1_ads.csv"))
+    parser.add_argument("--assignments", type=Path, default=DEFAULT_ADS_CSV)
     parser.add_argument("--ads", type=Path, default=Path("data/processed/ads/ads.jsonl"))
     parser.add_argument("--output", type=Path, default=Path("data/evaluation/preference_scores.csv"))
     parser.add_argument("--model", default=JUDGE_MODEL_NAME)

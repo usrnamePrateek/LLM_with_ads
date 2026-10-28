@@ -14,7 +14,7 @@ def main() -> int:
     parser.add_argument(
         "--assignments",
         type=Path,
-        default=Path("data/processed/generation/bulk_ads/query_top1_ads.csv"),
+        default=DEFAULT_ADS_CSV,
         help="Path to query_top1_ads.csv",
     )
     parser.add_argument(

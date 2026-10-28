@@ -2,7 +2,7 @@
 
 Orientation doc for future sessions. Built from static reading only (nothing was run).
 Items marked (unverified) were inferred, not confirmed. See also `docs/architecture.md`
-(partly stale, see "Fragile areas"), `AGENTS.md`, `.agents/rules/python.md`.
+`AGENTS.md`, `.agents/rules/python.md`.
 
 ## What it does
 Research pipeline that measures how ads can be inserted into LLM answers and how natural
@@ -34,17 +34,19 @@ All paths below are under `src/` unless noted.
    -> `lmarena/dataset/arena_preference_en_single_turn.parquet` (id, model, query, llm_response, timestamp)
 2. `generate_categories.py` -> `CategorizeQueriesService` + `VllmCategoryGenerator` (Qwen3-32B)
    -> `lmarena/lmarena_query_qwen3_categories.csv` (+ domain, intent, commercial_intent)
-3. Ads, two routes:
-   - `generate_ads.py` -> `GenerateAdsService`: reads `lmarena/domains.txt`, exactly 2 ads/domain, OVERWRITES `ads/ads.jsonl`
-   - `generate_bulk_ads.py` -> `GenerateBulkAdsService`: reads `lmarena/taxonomy_subtopics.csv`, `--target-ads` default 1000, APPENDS to `ads/ads.jsonl`, resumes from per-domain counts
+3. Ads:
+   `generate_bulk_ads.py` -> `GenerateBulkAdsService` + `VllmBulkAdGenerator`: reads `lmarena/taxonomy_subtopics.csv`,
+   `--target-ads` default 1000, APPENDS to `ads/ads.jsonl`, resumes from per-domain counts
+   (the older 2-ads-per-domain `generate_ads` route was removed)
    - ad record: domain, ad_id, headline, description, cta, category, subtopic
 4. `ad_indexing/scripts/build_index.py` -> `IndexAdsService` -> `ads/index/index.faiss` + `ads.json` sidecar.
    Ad id is `"{domain}::{ad_id}"` (`entities.make_ad_id`); embed text = headline + "\n" + description.
 5. `ad_integration/scripts/assign_top_ads.py` -> `AssignTopAdService`: encode queries, `store.query`, take hit 0
-   -> `generation/query_top1_ads.csv` (id, query, ad_id, ad_domain, headline, description, cta, score). Resumes by `id`.
+   -> `generation/bulk_ads/query_top1_ads.csv` (id, query, ad_id, ad_domain, headline, description, cta, score). Resumes by `id`.
+   All integration/evaluation defaults now live under `generation/bulk_ads/` (`generation/` itself is legacy).
 6. `place_ads.py` -> `PlaceAdsInResponsesService`: inner-join dataset and assignments on `id`; 4 rows per query
-   -> `generation/query_ad_positions.csv` (id, query, ad_id, position, response_with_ad) and
-   `generation/query_semantic_paragraphs.csv`. NO resume: it deletes both outputs first.
+   -> `generation/bulk_ads/query_ad_positions.csv` (id, query, ad_id, position, response_with_ad) and
+   `generation/bulk_ads/query_semantic_paragraphs.csv`. NO resume: it deletes both outputs first.
 7. `ad_evaluation/scripts/`:
    - `score_placements.py` -> `ScorePlacementsService` + `VllmPlacementJudge` -> `ad_evaluation/placement_scores.csv` (score 1-5, reason)
    - `run_preference_eval.py` -> ad vs other ads in same category, both orders -> `data/evaluation/preference_scores.csv`
@@ -86,7 +88,7 @@ Ad generation sampling: temp 0.7, top_p 0.8, top_k 20.
 
 ## External services, env vars, hardware
 - Hugging Face (dataset + model download): `HF_TOKEN` (read in `ad_generation/services.py` via dotenv)
-- `.env.example` lists `HF_TOKEN`, `GEMINI_API_KEY` per CLAUDE.md; `google-genai` is in requirements. Where Gemini is used: (unverified, not seen in `src/`; likely `analysis/google_topics_api.ipynb`)
+- `.env.example` / CLAUDE.md list only `HF_TOKEN` (`GEMINI_API_KEY` was dropped as unused). `google-genai` is still in `requirements.txt`; no use in `src/` (unverified for `analysis/google_topics_api.ipynb`)
 - No DB. Everything is files. GPU required for vLLM and BGE-M3 (CPU encoder path exists only for speed benchmark)
 - `ad_generation/llm/pathutil.prepend_venv_bin_to_path` edits PATH so `ninja` is found (JIT builds)
 
@@ -94,7 +96,7 @@ Ad generation sampling: temp 0.7, top_p 0.8, top_k 20.
 - From repo root: `./run_vllm.sh -m src.<module>.scripts.<name> [args]` (`unset LD_LIBRARY_PATH`, runs `.lmarena-env/bin/python`; relative path, so must run from root)
 - Typical order: prepare_dataset -> generate_categories -> generate_(bulk_)ads -> build_index -> assign_top_ads -> place_ads -> evaluation scripts
 - Most scripts accept `--limit N`; use it for smoke runs
-- Tests: `./run_vllm.sh -m unittest discover -s tests -t .` (no `tests/__init__.py`; discover with `-t .` works per CLAUDE.md, (unverified) here). No pytest/lint/typecheck configured
+- Tests: `./run_vllm.sh -m unittest discover -s tests -t .` (7 tests, speed_comparison only). No pytest/lint/typecheck configured
 - Tests must not hit network/GPU. `services.py` in speed_comparison imports torch at top, so the tests avoid it
 - Debug: failures are printed (not logged); parse failures become rows (`score=0`, winner "ERROR") or are skipped
 
@@ -112,31 +114,30 @@ speed_comparison `id` (only with explicit `--run-dir`); categories merge by `id`
 
 ## Fragile areas and tech debt
 Correctness risks:
-- `generate_ads.py` and `generate_bulk_ads.py` write the same default `ads.jsonl`; the first overwrites, the second appends; domain strings differ ("domain" vs "Topic / subtopic"). Mixing can produce duplicate Ad ids, and `JsonlAdRepository.load` raises on duplicates
+- Bulk generation appends to `ads.jsonl` and ad ids are `domain::ad_id`; hand-editing or double-appending the file can produce duplicate ids, and `JsonlAdRepository.load` raises on duplicates
 - `FaissVectorStore.load` (`store/faiss_store.py:90`) rebuilds `Ad` without `category` (sidecar has it via `asdict(Ad)`, load ignores it). Low impact today: `ad_evaluation` reads categories from `ads.jsonl` via `JsonlAdRepository`, not from the loaded store
 - `place_ads` has no resume and deletes outputs at start; a crash loses the run
 - `mask_ad_in_response` returns the response UNMASKED if neither exact match nor regex matches, so the ad can leak to the judge
 - Parse failures are saved as completed rows (score 0 / "ERROR"), so resume never retries them
 - Resume code with missing columns or unreadable files can silently overwrite the existing output (assign_top_ads, preference services)
-- speed_comparison: `--batch-size` is accepted but unused; default run creates a new `run_<ts>` dir so resume needs `--run-dir`; on resume the summary covers only new records; `--retrieval-only` ignores checkpoints
+- speed_comparison: `--batch-size` is accepted but intentionally unused (reserved for future batching); default run creates a new `run_<ts>` dir so resume needs `--run-dir`; on resume the summary covers only new records; `--retrieval-only` ignores checkpoints
 - assign_top_ads with no `id` column sets `id=""` for all rows; place_ads would then merge on empty ids (unverified impact)
-- Hardcoded relative `data/...` paths in evaluation scripts 2-4 (`generation/bulk_ads/...`) resolve against CWD; config defaults point at a different tree (`generation/`)
 
 Structure / hygiene:
 - Import cycle-ish: `common` -> `ad_generation.llm.parsing`; `ad_evaluation` also reuses `ad_generation` parsing helpers
-- Config re-exports across modules (`ad_integration.config`, `ad_indexing.config` re-export `common.shared_config`) contradict the "no derived config" convention; some constants unused (`ADS_PER_DOMAIN`, `ENCODE_BATCH_SIZE`, `DEFAULT_ADS_CSV`)
-- Copy-paste: `VllmAdGenerator` vs `VllmBulkAdGenerator`; `parse_ad_creatives` vs `parse_bulk_ad_creatives`; the two preference services in `ad_evaluation/services.py` (527 lines); six identical CSV saver bodies
+- Config re-exports across modules (`ad_integration.config`, `ad_indexing.config` re-export `common.shared_config`) contradict the "no derived config" convention; some constants unused (`ENCODE_BATCH_SIZE`)
+- Copy-paste: the two preference services in `ad_evaluation/services.py` (527 lines); six identical CSV saver bodies
 - `services.py` in `ad_generation` imports the vLLM wrapper at module top (torch pulled in for any import)
 - String-literal type hints naming classes that are not imported; many function-local imports
 - `ad_generation/fetch_taxonomy.py` is a scratch script (no main, nothing imports it)
-- Docs drift: `docs/architecture.md` uses `BgeM3Embedder`/`FaissStore` (code: `BgeM3Encoder`/`FaissVectorStore`) and omits speed_comparison; README and AGENTS.md omit it too; `requirements.txt` references missing `docs/requirements-vllm.txt`; vllm/torch not pinned there
+- vllm/torch are intentionally not in `requirements.txt` (env is built outside the repo; how is not documented)
 - CLI text drift: `run_placement_comparison` description says Llama 3.3 70B, default model is DeepSeek-R1-Distill
-- Tests cover only speed_comparison entities/repository
+- Tests cover only speed_comparison entities/repository (`tests/__init__.py` added so `discover -t .` works)
 
 ## Where to look for X
 - Shared paths and Arena constants: `common/shared_config.py`
 - vLLM loading, chat template, truncation, thinking-strip: `common/shared_llm.py`
-- Prompts and JSON schemas: `ad_generation/llm/prompts.py`, `ad_evaluation/llm/prompts.py`
+- Prompts and JSON schemas: `ad_generation/llm/prompts.py` (category + bulk ads), `ad_evaluation/llm/prompts.py`
 - LLM output parsing: `ad_generation/llm/parsing.py`, `ad_evaluation/llm/parsing.py`
 - Arena filtering (English, single-turn, winner pick): `ad_generation/arena.py`, `PrepareArenaDatasetService`
 - Embeddings / vector search: `ad_indexing/embeddings/bge_m3.py`, `store/faiss_store.py`, `services.py`

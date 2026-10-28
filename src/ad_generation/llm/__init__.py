@@ -4,16 +4,16 @@ from typing import TYPE_CHECKING
 from src.ad_generation.llm.base import TextGenerator
 
 if TYPE_CHECKING:
-    from src.ad_generation.llm.ad_generator import VllmAdGenerator
+    from src.ad_generation.llm.ad_generator import VllmBulkAdGenerator
     from src.ad_generation.llm.category_generator import VllmCategoryGenerator
 
-__all__ = ["TextGenerator", "VllmAdGenerator", "VllmCategoryGenerator"]
+__all__ = ["TextGenerator", "VllmBulkAdGenerator", "VllmCategoryGenerator"]
 
 
 def __getattr__(name: str):
-    if name == "VllmAdGenerator":
-        from src.ad_generation.llm.ad_generator import VllmAdGenerator
-        return VllmAdGenerator
+    if name == "VllmBulkAdGenerator":
+        from src.ad_generation.llm.ad_generator import VllmBulkAdGenerator
+        return VllmBulkAdGenerator
     if name == "VllmCategoryGenerator":
         from src.ad_generation.llm.category_generator import VllmCategoryGenerator
         return VllmCategoryGenerator

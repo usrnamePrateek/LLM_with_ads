@@ -13,7 +13,6 @@ from src.common.shared_config import (
     REPO_ROOT,
 )
 DEFAULT_CATEGORIES_OUTPUT = REPO_ROOT / "data/processed/lmarena/lmarena_query_qwen3_categories.csv"
-DEFAULT_DOMAINS_TXT = REPO_ROOT / "data/processed/lmarena/domains.txt"
 TAXONOMY_CSV_PATH = REPO_ROOT / "data/processed/lmarena/taxonomy_subtopics.csv"
 MAX_ADS_PER_PROMPT = 5
 
@@ -27,6 +26,4 @@ CATEGORY_MAX_RETRIES = 3
 CATEGORY_BATCH_SIZE = 32
 CATEGORY_MAX_MODEL_LEN = 32768
 CATEGORY_GPU_MEMORY_UTILIZATION = 0.90
-
-ADS_PER_DOMAIN = 2
 

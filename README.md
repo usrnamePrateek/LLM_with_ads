@@ -4,13 +4,13 @@ This repository contains a data pipeline and evaluation framework for testing th
 
 ## Project Structure
 
-The project is broken down into four main modules, executed sequentially:
+The project is broken down into four main modules, executed sequentially, plus a standalone latency benchmark:
 
 ### 1. `ad_generation/` (Data Preparation)
 Prepares the base dataset and generates the synthetic advertisements.
 - **`scripts/prepare_dataset.py`**: Downloads and formats the LMArena human preference dataset.
 - **`scripts/generate_categories.py`**: Uses an LLM to categorize queries by domain, intent, and commercial intent.
-- **`scripts/generate_ads.py`**: Generates synthetic ad creatives (headlines, descriptions, CTAs) tailored to the discovered domains.
+- **`scripts/generate_bulk_ads.py`**: Generates synthetic ad creatives (headlines, descriptions, CTAs) per taxonomy sub-topic and appends them to `ads.jsonl`; resumable.
 
 ### 2. `ad_indexing/` (Vector Search)
 Indexes the generated advertisements for semantic retrieval.
@@ -25,6 +25,13 @@ Matches user queries to relevant ads and inserts them into the generated respons
 ### 4. `ad_evaluation/` (Evaluation)
 Evaluates the quality and flow of the injected advertisements.
 - **`scripts/score_placements.py`**: Uses a large LLM (e.g., Llama-3.3-70B) acting as an expert digital marketer to score the contextual relevance, coherence, and flow disruption of the ad placement on a 1-5 scale. Supports checkpointing/resumption.
+- **`scripts/run_preference_eval.py`**: Pairwise judge: does the retrieved ad beat other ads from the same category? Run in both orders.
+- **`scripts/run_cross_category_eval.py`**: Same, against ads from other categories.
+- **`scripts/run_placement_comparison.py`**: Pairwise judge comparing `semantic` placement with `first`, `middle` and `last`.
+
+### 5. `speed_comparison/` (Latency Benchmark)
+Compares ad retrieval latency with LLM response generation latency.
+- **`scripts/run_speed_comparison.py`**: Phased benchmark (retrieval, LLM generation, summary). `--retrieval-only --retrieval-device cpu` runs without vLLM or a GPU.
 
 ## Shared Configuration (`src/common/`)
 
@@ -33,11 +40,14 @@ Evaluates the quality and flow of the injected advertisements.
 
 ## Usage
 
-All scripts are designed to be run as modules from the project root using the `.lmarena-env` virtual environment. 
+All scripts are designed to be run as modules from the project root via `./run_vllm.sh` (which uses the `.lmarena-env` virtual environment). 
 
 Example:
 ```bash
 # Run the placement evaluation judge
-python -m src.ad_evaluation.scripts.score_placements --limit 100
+./run_vllm.sh -m src.ad_evaluation.scripts.score_placements --limit 100
+
+# Run the unit tests
+./run_vllm.sh -m unittest discover -s tests -t .
 ```
 

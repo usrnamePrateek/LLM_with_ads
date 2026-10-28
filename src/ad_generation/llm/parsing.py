@@ -53,22 +53,6 @@ def parse_category(raw: str) -> QueryCategory:
     return QueryCategory(domain=domain, intent=intent, commercial_intent=commercial_intent)
 
 
-def parse_ad_creatives(raw: str) -> list[AdCreative]:
-    """Validates and parses a raw JSON string into a list of AdCreative objects."""
-    payload = extract_json_value(raw)
-    ads = payload.get("ads") if isinstance(payload, dict) else None
-    if not isinstance(ads, list) or len(ads) != 2:
-        raise ValueError("expected exactly 2 ads")
-    creatives: list[AdCreative] = []
-    for item in ads:
-        headline = str(item["headline"]).strip()
-        description = str(item["description"]).strip()
-        cta = str(item["cta"]).strip()
-        if not headline or not description or not cta:
-            raise ValueError("ad fields must be non-empty")
-        creatives.append(AdCreative(headline=headline, description=description, cta=cta))
-    return creatives
-
 def parse_bulk_ad_creatives(raw: str) -> list[AdCreative]:
     """Validates and parses a raw JSON string into a list of AdCreative objects (unbounded length)."""
     payload = extract_json_value(raw)

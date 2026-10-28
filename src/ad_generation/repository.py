@@ -67,24 +67,6 @@ class QueryFrameRepository:
 
 
 
-class TextDomainRepository:
-    """Loads a list of unique domain categories from a line-separated text file."""
-    def __init__(self, path: Path) -> None:
-        self._path = path
-
-    def load(self) -> list[str]:
-        if not self._path.exists():
-            raise FileNotFoundError(f"domains file not found: {self._path}")
-        domains = [
-            line.strip()
-            for line in self._path.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
-        if not domains:
-            raise ValueError(f"no domains found in {self._path}")
-        return domains
-
-
 class AdJsonlRepository:
     """Repository for persisting generated AdRecords as a JSONL file."""
     def __init__(self, path: Path) -> None:

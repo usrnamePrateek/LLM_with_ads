@@ -3,7 +3,7 @@
 ## Commands
 - Run via `./run_vllm.sh -m <module>` (unsets `LD_LIBRARY_PATH`, uses `.lmarena-env`), from repo root. Example: `./run_vllm.sh -m src.ad_evaluation.scripts.score_placements --limit 100`
 - Tests (unittest, no pytest/lint/typecheck configured): `./run_vllm.sh -m unittest discover -s tests -t .`
-- Env vars in `.env` (see `.env.example`: `HF_TOKEN`, `GEMINI_API_KEY`).
+- Env vars in `.env` (see `.env.example`: `HF_TOKEN`).
 
 ## Docs
 - Data flow: `docs/architecture.md` (read when a change spans modules)
