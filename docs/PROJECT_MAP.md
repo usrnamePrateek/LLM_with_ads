@@ -39,17 +39,17 @@ All paths below are under `src/` unless noted.
 2. `generate_categories.py` -> `CategorizeQueriesService` + `VllmCategoryGenerator` (Qwen3-32B)
    -> `lmarena/lmarena_query_qwen3_categories.csv` (+ domain, intent, commercial_intent)
 3. `generate_bulk_ads.py` -> `GenerateBulkAdsService` + `VllmBulkAdGenerator`: reads `lmarena/taxonomy_subtopics.csv`,
-   `--target-ads` default 1000, APPENDS to `ads/ads.jsonl`, resumes from per-domain counts
+   `--target-ads` default 1000, APPENDS to `ads_index/ads.jsonl`, resumes from per-domain counts
    - ad record: domain, ad_id, headline, description, cta, category, subtopic
-4. `ad_indexing/scripts/build_index.py` -> `IndexAdsService` -> `ads/index_new/index.faiss` + `ads.json` sidecar
-   (`DEFAULT_INDEX_DIR`; the old `ads/index` holds the earlier 1,560-ad set from `ads_old.jsonl` and is unused).
+4. `ad_indexing/scripts/build_index.py` -> `IndexAdsService` -> `ads_index/index_new/index.faiss` + `ads.json` sidecar
+   (`DEFAULT_INDEX_DIR`; `ads_index/old/` holds the earlier 1,560-ad set and its index, unused).
    Ad id is `"{domain}::{ad_id}"` (`entities.make_ad_id`); embed text = headline + "\n" + description.
 5. `ad_integration/scripts/assign_top_ads.py` -> `AssignTopAdService`: encode queries, `store.query`, take hit 0
-   -> `generation/bulk_ads/query_top1_ads.csv` (id, query, ad_id, ad_domain, headline, description, cta, score). Resumes by `id`.
-   All integration/evaluation defaults live under `generation/bulk_ads/` (`generation/` itself is legacy).
+   -> `ad_integration/bulk_ads/query_top1_ads.csv` (id, query, ad_id, ad_domain, headline, description, cta, score). Resumes by `id`.
+   All integration/evaluation defaults live under `ad_integration/bulk_ads/` (`ad_integration/old/` holds legacy outputs).
 6. `place_ads.py` -> `PlaceAdsInResponsesService`: inner-join dataset and assignments on `id`; 4 rows per query
-   -> `generation/bulk_ads/query_ad_positions.csv` (id, query, ad_id, position, response_with_ad) and
-   `generation/bulk_ads/query_semantic_paragraphs.csv`. NO resume: it deletes both outputs first.
+   -> `ad_integration/bulk_ads/query_ad_positions.csv` (id, query, ad_id, position, response_with_ad) and
+   `ad_integration/bulk_ads/query_semantic_paragraphs.csv`. NO resume: it deletes both outputs first.
 7. `ad_evaluation/scripts/`:
    - `score_placements.py` -> `ScorePlacementsService` + `VllmPlacementJudge` -> `ad_evaluation/placement_scores.csv` (score 1-5, reason)
    - `run_preference_eval.py` / `run_cross_category_eval.py` -> one `EvaluateAdPreferenceService`
@@ -121,7 +121,7 @@ Running vLLM and BGE-M3 on one GPU at once can OOM, so `run()` is phased:
 | Categorization | `Qwen/Qwen3-32B` (batch 32, len 32768, 3 retries, gpu 0.90) |
 | Placement comparison judge | `deepseek-ai/DeepSeek-R1-Distill-Qwen-32B` (len 131072, 4096 tok, batch 32, fp8 hardcoded) |
 | Embeddings | `BAAI/bge-m3`, `IndexFlatIP`, top-k 5 (indexing default) / 1 (integration) |
-| Speed bench | 1000 queries, 512 new tokens, temp 0, shared `DEFAULT_INDEX_DIR` (`ads/index_new`) |
+| Speed bench | 1000 queries, 512 new tokens, temp 0, shared `DEFAULT_INDEX_DIR` (`ads_index/index_new`) |
 Ad generation sampling: temp 0.7, top_p 0.8, top_k 20.
 
 ## External services, env vars, hardware
@@ -152,7 +152,7 @@ Resume keys: assign_top_ads `id`; score_placements `(id, ad_id, position)`; pref
 
 ## Fragile areas and known bugs
 - Masking (fixed 2026-10-29): the regex fallback could cut answer text, and placement comparison read an empty CTA as
-  "nan". An audit of `generation/bulk_ads/` (146,316 placed responses) found 100% exact matches and no empty CTAs,
+  "nan". An audit of `ad_integration/bulk_ads/` (146,316 placed responses) found 100% exact matches and no empty CTAs,
   so existing judge results were not affected
 - Parse failures are saved as completed rows (score 0 / "ERROR"), so resume never retries them
 - `place_ads` has no resume and deletes outputs at start; a crash loses the run

@@ -8,6 +8,7 @@ from src.ad_evaluation.config import (
 from src.ad_evaluation.llm.preference_judge import VllmPreferenceJudge
 from src.ad_evaluation.repository import PreferenceScoreCsvRepository
 from src.ad_evaluation.services import EvaluateAdPreferenceService
+from src.common.shared_config import DEFAULT_ADS_JSONL
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate pairwise cross-category ad preferences.")
@@ -20,7 +21,7 @@ def main() -> int:
     parser.add_argument(
         "--ads",
         type=Path,
-        default=Path("data/processed/ads/ads.jsonl"),
+        default=DEFAULT_ADS_JSONL,
         help="Path to ads.jsonl containing all generated ad creatives",
     )
     parser.add_argument(

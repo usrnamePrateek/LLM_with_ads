@@ -2,7 +2,7 @@
 from src.common.shared_config import REPO_ROOT
 
 DEFAULT_SEMANTIC_PARAS_CSV = (
-    REPO_ROOT / "data/processed/generation/bulk_ads/query_semantic_paragraphs.csv"
+    REPO_ROOT / "data/processed/ad_integration/bulk_ads/query_semantic_paragraphs.csv"
 )
 QUERY_COLUMN = "query"
 ID_COLUMN = "id"
