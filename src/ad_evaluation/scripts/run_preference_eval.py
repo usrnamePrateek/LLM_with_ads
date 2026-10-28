@@ -6,6 +6,7 @@ from pathlib import Path
 
 from src.ad_evaluation.config import (
     DEFAULT_ADS_CSV,
+    DEFAULT_SAME_CATEGORY_PREF_CSV,
     JUDGE_BATCH_SIZE,
     JUDGE_GPU_MEMORY_UTILIZATION,
     JUDGE_MAX_MODEL_LEN,
@@ -24,7 +25,7 @@ def parse_args() -> argparse.Namespace:
     # The default assignments path
     parser.add_argument("--assignments", type=Path, default=DEFAULT_ADS_CSV)
     parser.add_argument("--ads", type=Path, default=DEFAULT_ADS_JSONL)
-    parser.add_argument("--output", type=Path, default=Path("data/evaluation/preference_scores.csv"))
+    parser.add_argument("--output", type=Path, default=DEFAULT_SAME_CATEGORY_PREF_CSV)
     parser.add_argument("--model", default=JUDGE_MODEL_NAME)
     parser.add_argument("--max-model-len", type=int, default=JUDGE_MAX_MODEL_LEN)
     parser.add_argument("--gpu-memory-utilization", type=float, default=JUDGE_GPU_MEMORY_UTILIZATION)

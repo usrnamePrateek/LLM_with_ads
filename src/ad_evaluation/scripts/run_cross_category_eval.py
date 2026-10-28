@@ -4,6 +4,7 @@ from pathlib import Path
 
 from src.ad_evaluation.config import (
     DEFAULT_ADS_CSV,
+    DEFAULT_CROSS_CATEGORY_PREF_CSV,
 )
 from src.ad_evaluation.llm.preference_judge import VllmPreferenceJudge
 from src.ad_evaluation.repository import PreferenceScoreCsvRepository
@@ -27,7 +28,7 @@ def main() -> int:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("data/evaluation/cross_category_preference_scores.csv"),
+        default=DEFAULT_CROSS_CATEGORY_PREF_CSV,
         help="Path to save preference scores",
     )
     parser.add_argument(
