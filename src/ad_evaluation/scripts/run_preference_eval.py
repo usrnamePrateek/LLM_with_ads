@@ -14,6 +14,7 @@ from src.ad_evaluation.config import (
 from src.ad_evaluation.llm.preference_judge import VllmPreferenceJudge
 from src.ad_evaluation.repository import PreferenceScoreCsvRepository
 from src.ad_evaluation.services import EvaluateAdPreferenceService
+from src.common.shared_config import DEFAULT_ADS_JSONL
 
 
 def parse_args() -> argparse.Namespace:
@@ -22,7 +23,7 @@ def parse_args() -> argparse.Namespace:
     )
     # The default assignments path
     parser.add_argument("--assignments", type=Path, default=DEFAULT_ADS_CSV)
-    parser.add_argument("--ads", type=Path, default=Path("data/processed/ads/ads.jsonl"))
+    parser.add_argument("--ads", type=Path, default=DEFAULT_ADS_JSONL)
     parser.add_argument("--output", type=Path, default=Path("data/evaluation/preference_scores.csv"))
     parser.add_argument("--model", default=JUDGE_MODEL_NAME)
     parser.add_argument("--max-model-len", type=int, default=JUDGE_MAX_MODEL_LEN)
