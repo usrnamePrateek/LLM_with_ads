@@ -4,19 +4,19 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.ad_indexing.config import DEFAULT_INDEX_DIR
 from src.ad_indexing.embeddings.bge_m3 import BgeM3Encoder
 from src.ad_indexing.store.faiss_store import FaissVectorStore
-from src.ad_integration.config import DEFAULT_OUTPUT_CSV, DEFAULT_QUERIES_PARQUET, QUERY_COLUMN, TOP_K
+from src.ad_integration.config import QUERY_COLUMN, TOP_K
 from src.ad_integration.repository import AssignmentCsvRepository, QueryDatasetRepository
 from src.ad_integration.services import AssignTopAdService
+from src.common.shared_config import DEFAULT_INDEX_DIR, DEFAULT_OUTPUT_CSV, DEFAULT_QUERIES_INPUT
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Assign the top-1 retrieved ad to each arena_preference_en_single_turn query."
     )
-    parser.add_argument("--input", type=Path, default=DEFAULT_QUERIES_PARQUET)
+    parser.add_argument("--input", type=Path, default=DEFAULT_QUERIES_INPUT)
     parser.add_argument("--index-dir", type=Path, default=DEFAULT_INDEX_DIR)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_CSV)
     parser.add_argument("--query-column", default=QUERY_COLUMN)

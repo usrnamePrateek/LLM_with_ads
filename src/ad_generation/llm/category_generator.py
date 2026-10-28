@@ -1,7 +1,7 @@
 """vLLM-based generator for categorizing user queries by domain and intent."""
 from __future__ import annotations
 
-from src.ad_generation.llm.pathutil import prepend_venv_bin_to_path
+from src.common.env import prepend_venv_bin_to_path
 
 prepend_venv_bin_to_path()
 
