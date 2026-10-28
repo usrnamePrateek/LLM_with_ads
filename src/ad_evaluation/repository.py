@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from dataclasses import asdict
 
 import pandas as pd
 
+from src.common.io import save_rows
 from src.ad_evaluation.entities import PlacementScore, PairwisePreferenceScore, PlacementComparisonScore
 
 
@@ -41,15 +41,7 @@ class PlacementScoreCsvRepository:
         *,
         append: bool = False,
     ) -> None:
-        if not rows:
-            return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        frame = pd.DataFrame([asdict(row) for row in rows])
-        if append and path.exists():
-            frame.to_csv(path, mode="a", header=False, index=False)
-        else:
-            frame.to_csv(path, index=False)
-        print(f"Saved {len(rows):,} scores to {path}")
+        save_rows(rows, path, append=append, label="scores")
 
 
 class PreferenceScoreCsvRepository:
@@ -61,15 +53,7 @@ class PreferenceScoreCsvRepository:
         *,
         append: bool = False,
     ) -> None:
-        if not rows:
-            return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        frame = pd.DataFrame([asdict(row) for row in rows])
-        if append and path.exists():
-            frame.to_csv(path, mode="a", header=False, index=False)
-        else:
-            frame.to_csv(path, index=False)
-        print(f"Saved {len(rows):,} preference scores to {path}")
+        save_rows(rows, path, append=append, label="preference scores")
 
 class PlacementComparisonScoreCsvRepository:
     """Saves the output of the LLM placement comparison judge to a CSV file."""
@@ -80,12 +64,4 @@ class PlacementComparisonScoreCsvRepository:
         *,
         append: bool = False,
     ) -> None:
-        if not rows:
-            return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        frame = pd.DataFrame([asdict(row) for row in rows])
-        if append and path.exists():
-            frame.to_csv(path, mode="a", header=False, index=False)
-        else:
-            frame.to_csv(path, index=False)
-        print(f"Saved {len(rows):,} placement comparison scores to {path}")
+        save_rows(rows, path, append=append, label="placement comparison scores")

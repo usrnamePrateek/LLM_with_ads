@@ -4,10 +4,12 @@ from pathlib import Path
 
 from src.ad_evaluation.config import (
     DEFAULT_ADS_CSV,
+    DEFAULT_CROSS_CATEGORY_PREF_CSV,
 )
 from src.ad_evaluation.llm.preference_judge import VllmPreferenceJudge
 from src.ad_evaluation.repository import PreferenceScoreCsvRepository
-from src.ad_evaluation.services import EvaluateCrossCategoryAdPreferenceService
+from src.ad_evaluation.services import EvaluateAdPreferenceService
+from src.common.shared_config import DEFAULT_ADS_JSONL
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate pairwise cross-category ad preferences.")
@@ -20,13 +22,13 @@ def main() -> int:
     parser.add_argument(
         "--ads",
         type=Path,
-        default=Path("data/processed/ads/ads.jsonl"),
+        default=DEFAULT_ADS_JSONL,
         help="Path to ads.jsonl containing all generated ad creatives",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("data/evaluation/cross_category_preference_scores.csv"),
+        default=DEFAULT_CROSS_CATEGORY_PREF_CSV,
         help="Path to save preference scores",
     )
     parser.add_argument(
@@ -45,7 +47,7 @@ def main() -> int:
 
     judge = VllmPreferenceJudge()
     writer = PreferenceScoreCsvRepository()
-    service = EvaluateCrossCategoryAdPreferenceService(writer=writer, judge=judge)
+    service = EvaluateAdPreferenceService(writer=writer, judge=judge, candidates="cross_category")
 
     try:
         service.run(

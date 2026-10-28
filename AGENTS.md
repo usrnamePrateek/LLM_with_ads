@@ -4,18 +4,18 @@
 
 Sequential modules connected via filesystem (CSV/JSONL/Parquet):
 
-1. **`src/ad_generation`** → Extract Arena dataset, categorize queries, generate synthetic ads.
+1. **`src/ad_generation`** → Extract Arena dataset, generate synthetic ads (`old/` = legacy query categorization).
 2. **`src/ad_indexing`** → Embed ads with BGE-M3, build FAISS index.
 3. **`src/ad_integration`** → Match queries to ads, inject ad blocks into LLM responses.
 4. **`src/ad_evaluation`** → LLM-as-a-judge scores placement quality (1–5) and evaluates pairwise ad preference.
 5. **`src/speed_comparison`** → Benchmarks ad retrieval latency against LLM response generation latency.
-6. **`src/common`** → Shared config (`shared_config.py`) and vLLM base class (`shared_llm.py`).
+6. **`src/common`** → Shared config (`shared_config.py`), vLLM base class (`shared_llm.py`), and I/O/text helpers (`io.py`, `text.py`, `env.py`).
 
 ## Development
 
 - Virtual environment: `.lmarena-env`
 - GPU required for vLLM and sentence-transformers inference.
-- Consult `docs/architecture.md` for detailed data flow and module responsibilities.
+- Consult `docs/PROJECT_MAP.md` for data flow, module rules, and fragile spots.
 - Consult `.agents/rules/python.md` for coding standards.
 
 ## Key Conventions

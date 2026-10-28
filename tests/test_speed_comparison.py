@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import numpy as np
+import pandas as pd
 
 from src.speed_comparison.entities import (
     LatencyDistribution,
@@ -89,16 +90,12 @@ class TestSpeedComparisonRepository(unittest.TestCase):
         self.repo.save_records(records, output_csv)
         self.assertTrue(output_csv.exists())
 
-        loaded = self.repo.load_records(output_csv)
+        loaded = pd.read_csv(output_csv)
         self.assertEqual(len(loaded), 3)
         self.assertEqual(list(loaded["id"]), ["q-0", "q-1", "q-2"])
 
-    def test_checkpoint_processed_ids(self) -> None:
-        output_csv = Path(self.test_dir.name) / "checkpoint_test.csv"
-        # Non-existent file should return empty set
-        self.assertEqual(self.repo.load_processed_ids(output_csv), set())
-
-        # Save initial batch
+    def test_incremental_writes_append(self) -> None:
+        output_csv = Path(self.test_dir.name) / "incremental.csv"
         batch1 = [
             QuerySpeedComparisonRecord(
                 id=f"id-{i}",
@@ -119,10 +116,8 @@ class TestSpeedComparisonRepository(unittest.TestCase):
             for i in range(2)
         ]
         self.repo.save_records(batch1, output_csv)
-        processed = self.repo.load_processed_ids(output_csv)
-        self.assertEqual(processed, {"id-0", "id-1"})
+        self.assertEqual(list(pd.read_csv(output_csv)["id"]), ["id-0", "id-1"])
 
-        # Append second batch
         batch2 = [
             QuerySpeedComparisonRecord(
                 id="id-2",
@@ -142,8 +137,7 @@ class TestSpeedComparisonRepository(unittest.TestCase):
             )
         ]
         self.repo.save_records(batch2, output_csv, append=True)
-        processed_updated = self.repo.load_processed_ids(output_csv)
-        self.assertEqual(processed_updated, {"id-0", "id-1", "id-2"})
+        self.assertEqual(list(pd.read_csv(output_csv)["id"]), ["id-0", "id-1", "id-2"])
 
     def test_save_summary_json(self) -> None:
         summary_path = Path(self.test_dir.name) / "summary.json"

@@ -4,10 +4,11 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.ad_indexing.config import DEFAULT_INDEX_DIR, DEFAULT_TOP_K
+from src.ad_indexing.config import DEFAULT_TOP_K
 from src.ad_indexing.embeddings.bge_m3 import BgeM3Encoder
 from src.ad_indexing.services import SearchAdsService
 from src.ad_indexing.store.faiss_store import FaissVectorStore
+from src.common.shared_config import DEFAULT_INDEX_DIR
 
 
 def parse_args() -> argparse.Namespace:

@@ -15,7 +15,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.speed_comparison.config import DEFAULT_OUTPUT_CSV, DEFAULT_SPEED_COMPARISON_DIR, DEFAULT_SUMMARY_JSON
+from src.speed_comparison.config import (
+    DEFAULT_OUTPUT_CSV,
+    DEFAULT_RUNS_DIR,
+    DEFAULT_SPEED_COMPARISON_DIR,
+    DEFAULT_SUMMARY_JSON,
+)
 
 RETRIEVAL_CSV_NAME = f"retrieval_{DEFAULT_OUTPUT_CSV.name}"
 LLM_HARDWARE = "A100 80GB GPU"
@@ -193,12 +198,12 @@ tbody th{{text-align:left;font-weight:500}}
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--runs-dir", type=Path, default=DEFAULT_SPEED_COMPARISON_DIR)
+    parser.add_argument("--runs-dir", type=Path, default=DEFAULT_RUNS_DIR)
     parser.add_argument(
         "--output",
         type=Path,
         default=None,
-        help="Report path (default: reports/speed_comparison_report_<newest run timestamp>.html in the runs dir).",
+        help="Report path (default: reports/speed_comparison_report_<newest run timestamp>.html next to runs/).",
     )
     args = parser.parse_args()
 

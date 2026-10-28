@@ -6,20 +6,19 @@ from pathlib import Path
 
 from src.ad_indexing.embeddings.bge_m3 import BgeM3Encoder
 from src.ad_indexing.store.faiss_store import FaissVectorStore
-from src.ad_integration.config import (
-    DEFAULT_INDEX_DIR,
-    DEFAULT_OUTPUT_CSV,
-    DEFAULT_PLACED_ADS_CSV,
-    DEFAULT_QUERIES_PARQUET,
-    DEFAULT_SEMANTIC_PARAS_CSV,
-    QUERY_COLUMN,
-)
+from src.ad_integration.config import DEFAULT_SEMANTIC_PARAS_CSV, QUERY_COLUMN
 from src.ad_integration.repository import (
     PlacedAdCsvRepository,
     QueryDatasetRepository,
     SemanticParagraphCsvRepository,
 )
 from src.ad_integration.services import PlaceAdsInResponsesService
+from src.common.shared_config import (
+    DEFAULT_INDEX_DIR,
+    DEFAULT_OUTPUT_CSV,
+    DEFAULT_PLACED_ADS_CSV,
+    DEFAULT_QUERIES_INPUT,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,7 +28,7 @@ def parse_args() -> argparse.Namespace:
             "and semantic, and write per-chunk cosine scores."
         )
     )
-    parser.add_argument("--dataset", type=Path, default=DEFAULT_QUERIES_PARQUET)
+    parser.add_argument("--dataset", type=Path, default=DEFAULT_QUERIES_INPUT)
     parser.add_argument("--ads", type=Path, default=DEFAULT_OUTPUT_CSV)
     parser.add_argument("--output", type=Path, default=DEFAULT_PLACED_ADS_CSV)
     parser.add_argument("--semantic-output", type=Path, default=DEFAULT_SEMANTIC_PARAS_CSV)
@@ -41,6 +40,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    defaults = (DEFAULT_PLACED_ADS_CSV, DEFAULT_SEMANTIC_PARAS_CSV)
+    if args.limit is not None and any(
+        path in defaults and path.exists() for path in (args.output, args.semantic_output)
+    ):
+        raise SystemExit(
+            "--limit would replace the full placement outputs with a partial run; "
+            "pass --output and --semantic-output to write a test run elsewhere."
+        )
     writer = PlacedAdCsvRepository()
     encoder = BgeM3Encoder()
     store = FaissVectorStore(args.index_dir)

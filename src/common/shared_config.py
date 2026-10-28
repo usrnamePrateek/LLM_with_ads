@@ -17,14 +17,14 @@ AD_MAX_TOKENS = 1000
 AD_GPU_MEMORY_UTILIZATION = 0.95
 
 # ── Data paths shared across modules ─────────────────────────────────────────
-DEFAULT_ADS_JSONL = REPO_ROOT / "data/processed/ads/ads.jsonl"
-DEFAULT_INDEX_DIR = REPO_ROOT / "data/processed/ads/index"
+DEFAULT_ADS_JSONL = REPO_ROOT / "data/processed/ads_index/ads.jsonl"
+DEFAULT_INDEX_DIR = REPO_ROOT / "data/processed/ads_index/index_new"  # built from ads.jsonl (15k ads); the old 1,560-ad index is in ads_index/old
 
 DEFAULT_ARENA_OUTPUT_DIR = REPO_ROOT / "data/processed/lmarena/dataset"
 DEFAULT_QUERIES_INPUT = REPO_ROOT / "data/processed/lmarena/dataset/arena_preference_en_single_turn.parquet"
 
-DEFAULT_OUTPUT_CSV = REPO_ROOT / "data/processed/generation/bulk_ads/query_top1_ads.csv"
-DEFAULT_PLACED_ADS_CSV = REPO_ROOT / "data/processed/generation/bulk_ads/query_ad_positions.csv"
+DEFAULT_OUTPUT_CSV = REPO_ROOT / "data/processed/ad_integration/bulk_ads/query_top1_ads.csv"
+DEFAULT_PLACED_ADS_CSV = REPO_ROOT / "data/processed/ad_integration/bulk_ads/query_ad_positions.csv"
 
 # ── Arena dataset ────────────────────────────────────────────────────────────
 ARENA_DATASET_ID = "lmarena-ai/arena-human-preference-140k"

@@ -24,6 +24,7 @@ from src.ad_integration.repository import (
     SemanticParagraphCsvRepository,
 )
 from src.ad_integration.core.semantic import score_chunks
+from src.common.io import read_checkpoint
 
 
 class AssignTopAdService:
@@ -53,15 +54,11 @@ class AssignTopAdService:
         # Checkpointing: skip already processed queries
         processed_ids = set()
         wrote_something = False
-        if output_path.exists():
-            try:
-                existing = pd.read_csv(output_path)
-                if ID_COLUMN in existing.columns:
-                    processed_ids = set(existing[ID_COLUMN].astype(str))
-                    wrote_something = True
-                    print(f"Found existing output with {len(processed_ids):,} processed IDs.")
-            except Exception as e:
-                print(f"Warning: could not read existing output for checkpointing: {e}")
+        existing = read_checkpoint(output_path, [ID_COLUMN])
+        if existing is not None:
+            processed_ids = set(existing[ID_COLUMN].astype(str))
+            wrote_something = True
+            print(f"Found existing output with {len(processed_ids):,} processed IDs.")
 
         if ID_COLUMN in frame.columns:
             frame[ID_COLUMN] = frame[ID_COLUMN].astype(str)
@@ -156,10 +153,12 @@ class PlaceAdsInResponsesService:
             merged = merged.head(limit).copy()
         print(f"Placing ads for {len(merged):,} queries ...")
 
-        if output_path.exists():
-            output_path.unlink()
-        if semantic_output_path.exists():
-            semantic_output_path.unlink()
+        # Write to *.partial.csv and swap into place only after the whole run succeeds, so a crash
+        # never destroys the previous outputs (there is no resume; a rerun starts over).
+        final_paths = (output_path, semantic_output_path)
+        output_path, semantic_output_path = (_partial_path(path) for path in final_paths)
+        for path in (output_path, semantic_output_path):
+            path.unlink(missing_ok=True)
 
         vector_cache: dict[str, object] = {}
         placed: list[PlacedAdResponse] = []
@@ -231,4 +230,14 @@ class PlaceAdsInResponsesService:
             self._semantic_writer.save(
                 semantic_buffer, semantic_output_path, append=wrote_semantic
             )
+        for partial, final in zip((output_path, semantic_output_path), final_paths):
+            if partial.exists():
+                partial.replace(final)
+            else:
+                final.unlink(missing_ok=True)  # this run produced no rows for it
+        print(f"Wrote {final_paths[0]} and {final_paths[1]}")
         return placed
+
+
+def _partial_path(path: Path) -> Path:
+    return path.with_name(f"{path.stem}.partial{path.suffix}")

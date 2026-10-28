@@ -7,6 +7,7 @@ from pathlib import Path
 
 from src.ad_evaluation.config import (
     DEFAULT_ADS_CSV,
+    DEFAULT_PLACEMENT_COMPARISON_CSV,
     DEFAULT_POSITIONS_CSV,
     PLACEMENT_JUDGE_BATCH_SIZE,
     PLACEMENT_JUDGE_GPU_MEMORY_UTILIZATION,
@@ -20,7 +21,7 @@ from src.ad_evaluation.services import EvaluatePlacementComparisonService
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Score placement comparisons pairwise (semantic vs first/middle/last) with Llama 3.3 70B (vLLM)."
+        description="Score placement comparisons pairwise (semantic vs first/middle/last) with DeepSeek-R1-Distill-Qwen-32B (vLLM)."
     )
     parser.add_argument(
         "--positions", 
@@ -37,7 +38,7 @@ def main() -> int:
     parser.add_argument(
         "--output", 
         type=Path, 
-        default=Path("data/evaluation/placement_comparison_scores.csv"),
+        default=DEFAULT_PLACEMENT_COMPARISON_CSV,
         help="Path to save the comparison scores."
     )
     parser.add_argument("--model", default=PLACEMENT_JUDGE_MODEL_NAME)

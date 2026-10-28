@@ -11,18 +11,17 @@ import numpy as np
 import pandas as pd
 import torch
 
-from src.ad_generation.llm.parsing import strip_thinking
+from src.common.text import strip_thinking
 from src.ad_indexing.embeddings.base import EmbeddingEncoder
 from src.ad_indexing.embeddings.bge_m3 import BgeM3Encoder
 from src.ad_indexing.store.base import VectorStore
 from src.ad_indexing.store.faiss_store import FaissVectorStore
-from src.ad_integration.repository import QueryDatasetRepository
+from src.common.io import load_queries
+from src.common.shared_config import DEFAULT_INDEX_DIR
 from src.common.shared_llm import BaseVllmGenerator
 from src.speed_comparison.config import (
     CHECKPOINT_EVERY,
-    DEFAULT_BATCH_SIZE,
     DEFAULT_GPU_MEMORY_UTILIZATION,
-    DEFAULT_INDEX_DIR,
     DEFAULT_LLM_MODEL,
     DEFAULT_MAX_MODEL_LEN,
     DEFAULT_MAX_NEW_TOKENS,
@@ -37,7 +36,6 @@ from src.speed_comparison.config import (
     QUERY_COLUMN,
 )
 from src.speed_comparison.entities import (
-    LatencyDistribution,
     QueryLlmTiming,
     QueryRetrievalTiming,
     QuerySpeedComparisonRecord,
@@ -179,16 +177,44 @@ class VllmBenchmarkGenerator(BaseVllmGenerator):
         )
 
 
+def _retrieval_only_summary(
+    records: list[QueryRetrievalTiming],
+    retrieval_device: str,
+    retrieval_wall_clock_sec: float,
+) -> SpeedBenchmarkSummary:
+    """Builds a summary for a --retrieval-only run; LLM fields are empty or zero."""
+    return SpeedBenchmarkSummary(
+        sample_size=len(records),
+        llm_model="(skipped)",
+        embedding_model=EMBEDDING_MODEL_NAME,
+        retrieval_device=retrieval_device,
+        retrieval_distribution=compute_distribution([r.total_retrieval_ms for r in records]),
+        embed_distribution=compute_distribution([r.embed_time_ms for r in records]),
+        search_distribution=compute_distribution([r.search_time_ms for r in records]),
+        llm_distribution=compute_distribution([]),
+        mean_speedup_ratio=0.0,
+        median_speedup_ratio=0.0,
+        mean_time_delta_ms=0.0,
+        pct_retrieval_finished_first=100.0,
+        mean_tokens_per_sec=0.0,
+        total_retrieval_wall_clock_sec=retrieval_wall_clock_sec,
+        total_llm_wall_clock_sec=0.0,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+    )
+
+
 class SpeedComparisonOrchestrator:
-    """Coordinates two-phase benchmark execution, checkpointing, and statistical comparison."""
+    """Coordinates two-phase benchmark execution, incremental result writes, and statistical comparison.
+
+    Every run gets a fresh runs/run_<ts>/ folder and is measured in one sitting; there is no resume, so latencies in a
+    run are never mixed across sessions. A crashed run keeps its partial CSV (no summary) and is simply rerun.
+    """
 
     def __init__(
         self,
         repository: SpeedComparisonRepository | None = None,
-        query_loader: QueryDatasetRepository | None = None,
     ) -> None:
         self._repo = repository or SpeedComparisonRepository()
-        self._query_loader = query_loader or QueryDatasetRepository()
 
     def run(
         self,
@@ -196,9 +222,7 @@ class SpeedComparisonOrchestrator:
         index_dir: Path = DEFAULT_INDEX_DIR,
         output_csv: Path = DEFAULT_OUTPUT_CSV,
         summary_json: Path = DEFAULT_SUMMARY_JSON,
-        run_dir: Path | None = None,
         limit: int | None = 1000,
-        batch_size: int = DEFAULT_BATCH_SIZE,
         llm_model: str = DEFAULT_LLM_MODEL,
         max_model_len: int = DEFAULT_MAX_MODEL_LEN,
         max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS,
@@ -211,11 +235,8 @@ class SpeedComparisonOrchestrator:
     ) -> SpeedBenchmarkSummary:
         """Executes the full two-phase speed benchmark on queries."""
         run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        if run_dir is not None:
-            target_dir = Path(run_dir)
-        else:
-            target_dir = output_csv.parent / f"run_{run_ts}"
-        target_dir.mkdir(parents=True, exist_ok=True)
+        target_dir = output_csv.parent / f"run_{run_ts}"
+        target_dir.mkdir(parents=True, exist_ok=False)
 
         target_output_csv = target_dir / output_csv.name
         target_summary_json = target_dir / summary_json.name
@@ -225,18 +246,11 @@ class SpeedComparisonOrchestrator:
         print(f"Summary JSON path: {target_summary_json}")
 
         # 1. Load dataset queries
-        frame = self._query_loader.load(queries_path, query_column=QUERY_COLUMN)
+        frame = load_queries(queries_path, query_column=QUERY_COLUMN)
         if ID_COLUMN not in frame.columns:
             frame[ID_COLUMN] = [str(i) for i in range(len(frame))]
         else:
             frame[ID_COLUMN] = frame[ID_COLUMN].astype(str)
-
-        # 2. Checkpointing: filter out already-processed IDs
-        processed_ids = self._repo.load_processed_ids(target_output_csv)
-        if not processed_ids and output_csv != target_output_csv and output_csv.exists():
-            processed_ids = self._repo.load_processed_ids(output_csv)
-        if processed_ids and not retrieval_only:
-            frame = frame[~frame[ID_COLUMN].isin(processed_ids)].copy()
 
         if limit is not None:
             frame = frame.head(limit).copy()
@@ -244,11 +258,7 @@ class SpeedComparisonOrchestrator:
         total_queries = len(frame)
         print(f"Total queries to benchmark: {total_queries:,}")
         if total_queries == 0:
-            print("All queries have already been benchmarked in existing output.")
-            source_csv = target_output_csv if target_output_csv.exists() else output_csv
-            return self._build_summary_from_existing(
-                source_csv, llm_model, EMBEDDING_MODEL_NAME, retrieval_device=retrieval_device
-            )
+            raise ValueError(f"no queries to benchmark in {queries_path}")
 
         query_tuples = [
             (str(row[ID_COLUMN]), str(row[QUERY_COLUMN]))
@@ -268,31 +278,7 @@ class SpeedComparisonOrchestrator:
         if retrieval_only:
             print("\n=== --retrieval-only requested: skipping LLM Phase ===")
             retrieval_records = list(retrieval_timings_dict.values())
-            embed_times = [r.embed_time_ms for r in retrieval_records]
-            search_times = [r.search_time_ms for r in retrieval_records]
-            total_times = [r.total_retrieval_ms for r in retrieval_records]
-            r_dist = compute_distribution(total_times)
-            e_dist = compute_distribution(embed_times)
-            s_dist = compute_distribution(search_times)
-            empty_dist = compute_distribution([])
-            summary = SpeedBenchmarkSummary(
-                sample_size=len(retrieval_records),
-                llm_model="(skipped)",
-                embedding_model=EMBEDDING_MODEL_NAME,
-                retrieval_device=retrieval_device,
-                retrieval_distribution=r_dist,
-                embed_distribution=e_dist,
-                search_distribution=s_dist,
-                llm_distribution=empty_dist,
-                mean_speedup_ratio=0.0,
-                median_speedup_ratio=0.0,
-                mean_time_delta_ms=0.0,
-                pct_retrieval_finished_first=100.0,
-                mean_tokens_per_sec=0.0,
-                total_retrieval_wall_clock_sec=t_retrieval_total,
-                total_llm_wall_clock_sec=0.0,
-                timestamp=datetime.now(timezone.utc).isoformat(),
-            )
+            summary = _retrieval_only_summary(retrieval_records, retrieval_device, t_retrieval_total)
             retrieval_csv = target_dir / f"retrieval_{output_csv.name}"
             self._repo.save_retrieval_records(retrieval_records, retrieval_csv)
             self._repo.save_summary(summary, target_summary_json)
@@ -316,7 +302,7 @@ class SpeedComparisonOrchestrator:
 
         all_records: list[QuerySpeedComparisonRecord] = []
         pending_buffer: list[QuerySpeedComparisonRecord] = []
-        wrote_any = len(processed_ids) > 0
+        wrote_any = False
 
         t_llm_start = time.perf_counter()
         for idx, (q_id, q_text) in enumerate(query_tuples, start=1):
@@ -448,45 +434,6 @@ class SpeedComparisonOrchestrator:
             total_llm_wall_clock_sec=llm_wall_clock_sec,
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
-
-    def _build_summary_from_existing(
-        self,
-        output_csv: Path,
-        llm_model: str,
-        embedding_model: str,
-        retrieval_device: str = DEFAULT_RETRIEVAL_DEVICE,
-    ) -> SpeedBenchmarkSummary:
-        """Builds summary from existing output CSV if all queries were previously processed."""
-        df = self._repo.load_records(output_csv)
-        records = [
-            QuerySpeedComparisonRecord(
-                id=str(row["id"]),
-                query=str(row["query"]),
-                retrieval_time_ms=float(row["retrieval_time_ms"]),
-                embed_time_ms=float(row["embed_time_ms"]),
-                search_time_ms=float(row["search_time_ms"]),
-                retrieved_ad_id=str(row["retrieved_ad_id"]),
-                retrieved_ad_score=float(row["retrieved_ad_score"]),
-                llm_time_ms=float(row["llm_time_ms"]),
-                prompt_tokens=int(row["prompt_tokens"]),
-                output_tokens=int(row["output_tokens"]),
-                tokens_per_sec=float(row["tokens_per_sec"]),
-                speedup_ratio=float(row["speedup_ratio"]),
-                time_delta_ms=float(row["time_delta_ms"]),
-                retrieval_finished_first=bool(row["retrieval_finished_first"]),
-            )
-            for _, row in df.iterrows()
-        ]
-        summary = self._compute_summary(
-            records=records,
-            llm_model=llm_model,
-            embedding_model=embedding_model,
-            retrieval_device=retrieval_device,
-            retrieval_wall_clock_sec=0.0,
-            llm_wall_clock_sec=0.0,
-        )
-        self.print_report(summary)
-        return summary
 
     @staticmethod
     def print_report(summary: SpeedBenchmarkSummary) -> None:

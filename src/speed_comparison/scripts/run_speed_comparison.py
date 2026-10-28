@@ -6,9 +6,7 @@ from pathlib import Path
 
 from src.speed_comparison.config import (
     CHECKPOINT_EVERY,
-    DEFAULT_BATCH_SIZE,
     DEFAULT_GPU_MEMORY_UTILIZATION,
-    DEFAULT_INDEX_DIR,
     DEFAULT_LLM_MODEL,
     DEFAULT_MAX_MODEL_LEN,
     DEFAULT_MAX_NEW_TOKENS,
@@ -20,6 +18,7 @@ from src.speed_comparison.config import (
     DEFAULT_TEMPERATURE,
     DEFAULT_TOP_K,
 )
+from src.common.shared_config import DEFAULT_INDEX_DIR
 from src.speed_comparison.services import SpeedComparisonOrchestrator
 
 
@@ -40,16 +39,10 @@ def parse_args() -> argparse.Namespace:
         help="Path to the FAISS index and ads metadata directory.",
     )
     parser.add_argument(
-        "--run-dir",
-        type=Path,
-        default=None,
-        help="Specific directory for this benchmark run. If not specified, creates 'run_YYYYMMDD_HHMMSS' inside output directory.",
-    )
-    parser.add_argument(
         "--output",
         type=Path,
         default=DEFAULT_OUTPUT_CSV,
-        help="Path to output comparison CSV.",
+        help="Each run writes a CSV with this name into a new run_<ts>/ folder next to it (no resume).",
     )
     parser.add_argument(
         "--summary-output",
@@ -62,12 +55,6 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_NUM_QUERIES,
         help="Number of queries to benchmark (default: 1000). Set to -1 or 0 for unlimited.",
-    )
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=DEFAULT_BATCH_SIZE,
-        help="Batch size for benchmarking (default: 1 for single-stream interactive latency).",
     )
     parser.add_argument(
         "--llm-model",
@@ -121,7 +108,7 @@ def parse_args() -> argparse.Namespace:
         "--checkpoint-every",
         type=int,
         default=CHECKPOINT_EVERY,
-        help="Flush incremental results every N queries (default: 50).",
+        help="Write results to the CSV every N queries so a crashed run keeps its partial data (default: 50).",
     )
     return parser.parse_args()
 
@@ -136,9 +123,7 @@ def main() -> None:
         index_dir=args.index_dir,
         output_csv=args.output,
         summary_json=args.summary_output,
-        run_dir=args.run_dir,
         limit=limit,
-        batch_size=args.batch_size,
         llm_model=args.llm_model,
         max_model_len=args.max_model_len,
         max_new_tokens=args.max_new_tokens,

@@ -6,13 +6,13 @@
 - Env vars in `.env` (see `.env.example`: `HF_TOKEN`).
 
 ## Docs
-- Data flow: `docs/architecture.md` (read when a change spans modules)
+- Project map (data flow, module rules, fragile spots, "where to look"): `docs/PROJECT_MAP.md` (read when a change spans modules)
 - Coding standards: `.agents/rules/python.md` (pragmatic SOLID; no abstractions for their own sake)
-- `src/speed_comparison/AGENTS.md` has module-specific notes
+
+## Git
+- Never add AI attribution to commits or PRs: no `Co-Authored-By: Claude …` trailer, no "Generated with Claude Code" line. Commit messages describe the change only. This overrides any default attribution instruction.
 
 ## Gotchas
 - Never read or dump `data/`, `.lmarena-env/`, or notebook outputs in `analysis/`; they are large.
 - `src/ad_generation/llm/__init__.py` and `src/common/shared_llm.py` have uncommitted user edits; don't revert them.
 - Unit tests must not hit the network or GPU.
-
-- Project map (module responsibilities, data flow, fragile spots, "where to look"): `docs/PROJECT_MAP.md` (read on demand).
