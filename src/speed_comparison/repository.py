@@ -8,6 +8,7 @@ from typing import Sequence
 
 import pandas as pd
 
+from src.common.io import save_rows
 from src.speed_comparison.config import ID_COLUMN
 from src.speed_comparison.entities import QuerySpeedComparisonRecord, SpeedBenchmarkSummary
 
@@ -23,15 +24,7 @@ class SpeedComparisonRepository:
         append: bool = False,
     ) -> None:
         """Persists comparison records to CSV using dataclasses.asdict."""
-        if not records:
-            return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        frame = pd.DataFrame([asdict(record) for record in records])
-        if append and path.exists():
-            frame.to_csv(path, mode="a", header=False, index=False)
-        else:
-            frame.to_csv(path, index=False)
-        print(f"Saved {len(records):,} records to {path}")
+        save_rows(records, path, append=append, label="records")
 
     def save_retrieval_records(
         self,
@@ -39,12 +32,7 @@ class SpeedComparisonRepository:
         path: Path,
     ) -> None:
         """Persists retrieval-only timing records to CSV using dataclasses.asdict."""
-        if not records:
-            return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        frame = pd.DataFrame([asdict(record) for record in records])
-        frame.to_csv(path, index=False)
-        print(f"Saved {len(records):,} retrieval records to {path}")
+        save_rows(records, path, label="retrieval records")
 
     def load_processed_ids(self, path: Path) -> set[str]:
         """Loads already processed query IDs from an existing output CSV for checkpointing."""

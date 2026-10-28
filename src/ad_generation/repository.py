@@ -10,6 +10,7 @@ import pandas as pd
 
 from src.ad_generation.config import CATEGORY_COLUMNS, QUERY_COLUMN
 from src.ad_generation.entities import AdRecord
+from src.common.io import load_queries
 
 
 class QueryFrameRepository:
@@ -17,22 +18,7 @@ class QueryFrameRepository:
 
     def load(self, path: Path, query_column: str = QUERY_COLUMN) -> pd.DataFrame:
         """Loads a Parquet or CSV file containing queries, filtering out rows with missing query data."""
-        if not path.exists():
-            raise FileNotFoundError(f"Input not found: {path}")
-        suffix = path.suffix.lower()
-        if suffix == ".parquet":
-            df = pd.read_parquet(path)
-        elif suffix == ".csv":
-            df = pd.read_csv(path)
-        else:
-            raise ValueError(f"Unsupported input type: {path}")
-
-        if query_column not in df.columns:
-            raise ValueError(f"Missing column {query_column!r} in {path}")
-
-        df = df.dropna(subset=[query_column]).copy()
-        print(f"Loaded {len(df):,} rows from {path}")
-        return df
+        return load_queries(path, query_column)
 
     def merge_checkpoint(self, checkpoint_path: Path, source_df: pd.DataFrame) -> pd.DataFrame:
         """Merges previously categorized query rows from a CSV checkpoint to resume interrupted batch generation jobs."""

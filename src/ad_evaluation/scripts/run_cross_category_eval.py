@@ -7,7 +7,7 @@ from src.ad_evaluation.config import (
 )
 from src.ad_evaluation.llm.preference_judge import VllmPreferenceJudge
 from src.ad_evaluation.repository import PreferenceScoreCsvRepository
-from src.ad_evaluation.services import EvaluateCrossCategoryAdPreferenceService
+from src.ad_evaluation.services import EvaluateAdPreferenceService
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate pairwise cross-category ad preferences.")
@@ -45,7 +45,7 @@ def main() -> int:
 
     judge = VllmPreferenceJudge()
     writer = PreferenceScoreCsvRepository()
-    service = EvaluateCrossCategoryAdPreferenceService(writer=writer, judge=judge)
+    service = EvaluateAdPreferenceService(writer=writer, judge=judge, candidates="cross_category")
 
     try:
         service.run(

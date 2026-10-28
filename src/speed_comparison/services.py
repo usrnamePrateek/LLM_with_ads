@@ -16,7 +16,7 @@ from src.ad_indexing.embeddings.base import EmbeddingEncoder
 from src.ad_indexing.embeddings.bge_m3 import BgeM3Encoder
 from src.ad_indexing.store.base import VectorStore
 from src.ad_indexing.store.faiss_store import FaissVectorStore
-from src.ad_integration.repository import QueryDatasetRepository
+from src.common.io import load_queries
 from src.common.shared_llm import BaseVllmGenerator
 from src.speed_comparison.config import (
     CHECKPOINT_EVERY,
@@ -185,10 +185,8 @@ class SpeedComparisonOrchestrator:
     def __init__(
         self,
         repository: SpeedComparisonRepository | None = None,
-        query_loader: QueryDatasetRepository | None = None,
     ) -> None:
         self._repo = repository or SpeedComparisonRepository()
-        self._query_loader = query_loader or QueryDatasetRepository()
 
     def run(
         self,
@@ -225,7 +223,7 @@ class SpeedComparisonOrchestrator:
         print(f"Summary JSON path: {target_summary_json}")
 
         # 1. Load dataset queries
-        frame = self._query_loader.load(queries_path, query_column=QUERY_COLUMN)
+        frame = load_queries(queries_path, query_column=QUERY_COLUMN)
         if ID_COLUMN not in frame.columns:
             frame[ID_COLUMN] = [str(i) for i in range(len(frame))]
         else:
