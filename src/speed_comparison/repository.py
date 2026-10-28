@@ -8,7 +8,7 @@ from typing import Sequence
 
 import pandas as pd
 
-from src.common.io import save_rows
+from src.common.io import read_checkpoint, save_rows
 from src.speed_comparison.config import ID_COLUMN
 from src.speed_comparison.entities import QuerySpeedComparisonRecord, SpeedBenchmarkSummary
 
@@ -36,17 +36,12 @@ class SpeedComparisonRepository:
 
     def load_processed_ids(self, path: Path) -> set[str]:
         """Loads already processed query IDs from an existing output CSV for checkpointing."""
-        if not path.exists():
+        frame = read_checkpoint(path, [ID_COLUMN])
+        if frame is None:
             return set()
-        try:
-            frame = pd.read_csv(path)
-            if ID_COLUMN in frame.columns:
-                processed = set(frame[ID_COLUMN].astype(str))
-                print(f"Found existing output at {path} with {len(processed):,} processed IDs.")
-                return processed
-        except Exception as err:
-            print(f"Warning: could not read existing output for checkpointing: {err}")
-        return set()
+        processed = set(frame[ID_COLUMN].astype(str))
+        print(f"Found existing output at {path} with {len(processed):,} processed IDs.")
+        return processed
 
     def save_summary(
         self,
