@@ -58,7 +58,7 @@ All paths below are under `src/` unless noted.
    - `run_preference_eval.py` / `run_cross_category_eval.py` -> one `EvaluateAdPreferenceService`
      with `candidates="same_category"` / `"cross_category"`; assigned ad vs each candidate ad, both orders
      -> `data/evaluation/ad_pref_eval/same_category_pref_scores.csv` / `.../ad_pref_eval/cross_category_preference_scores.csv`
-   - `run_placement_comparison.py` -> semantic vs first/middle/last, both orders -> `data/evaluation/placement_comparison_scores.csv`
+   - `run_placement_comparison.py` -> semantic vs first/middle/last, both orders -> `data/evaluation/ad_placement_eval/placement_comparison_scores.csv`
 8. `speed_comparison/scripts/run_speed_comparison.py` -> `SpeedComparisonOrchestrator.run` -> `speed_comparison/run_<ts>/`
    (see "speed_comparison" below). `build_report.py` -> `speed_comparison/reports/speed_comparison_report_<newest run ts>.html`
    (the `/speed-report` skill drives it).
