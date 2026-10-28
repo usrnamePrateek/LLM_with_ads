@@ -5,7 +5,7 @@ description: Build the HTML report comparing ad retrieval latency against LLM re
 
 # Speed comparison report
 
-Runs live in `data/processed/speed_comparison/run_YYYYMMDD_HHMMSS/`:
+Runs live in `data/evaluation/speed_comparison/runs/run_YYYYMMDD_HHMMSS/`:
 - **Retrieval-only run**: contains `retrieval_speed_comparison_results.csv` (from `--retrieval-only`).
 - **LLM run**: contains `speed_comparison_results.csv`, plus `speed_comparison_summary.json` (holds `llm_model`) once it completes.
 
@@ -23,7 +23,7 @@ The report labels the hardware, using constants at the top of the script: `LLM_H
    ```
    ./run_vllm.sh -m src.speed_comparison.scripts.build_report
    ```
-   Options: `--runs-dir <dir>`, `--output <path>` (default `data/processed/speed_comparison/reports/speed_comparison_report_<newest run timestamp>.html`; rerunning updates that file in place, and a new benchmark run creates a new file).
+   Options: `--runs-dir <dir>`, `--output <path>` (default `data/evaluation/speed_comparison/reports/speed_comparison_report_<newest run timestamp>.html`; rerunning updates that file in place, and a new benchmark run creates a new file).
 2. Check the printed lines: every model should show `n` equal to the benchmark size and `matched == n`. Flag any skipped runs, mismatched counts, or a retrieval device that differs from what the user expects (it is in the retrieval run's summary and in the report header), and check that the hardware labels still match where the runs were done.
 3. Tell the user the output path and the key numbers (retrieval p50, each model's LLM p50, tokens/s, median speedup). Offer to publish it as an Artifact if they want a shareable page.
 

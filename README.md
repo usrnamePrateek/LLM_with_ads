@@ -32,7 +32,7 @@ Evaluates the quality and flow of the injected advertisements.
 ### 5. `speed_comparison/` (Latency Benchmark)
 Compares ad retrieval latency with LLM response generation latency.
 - **`scripts/run_speed_comparison.py`**: Phased benchmark (retrieval, LLM generation, summary). `--retrieval-only --retrieval-device cpu` runs without vLLM or a GPU.
-- **`scripts/build_report.py`**: HTML report comparing the latest retrieval-only run with each model's LLM run (`data/processed/speed_comparison/reports/`).
+- **`scripts/build_report.py`**: HTML report comparing the latest retrieval-only run with each model's LLM run (`data/evaluation/speed_comparison/reports/`).
 
 ## Shared Configuration (`src/common/`)
 
