@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Iterable, Literal
 import pandas as pd
 
 from src.ad_evaluation.config import CHECKPOINT_EVERY, DEFAULT_SCORES_CSV, JUDGE_BATCH_SIZE
-from src.ad_evaluation.core.masking import mask_ad_in_response
+from src.ad_evaluation.core.masking import AdBlockNotFoundError, mask_ad_in_response
 from src.ad_evaluation.entities import PairwisePreferenceScore, PlacementComparisonScore, PlacementScore
 from src.ad_evaluation.llm.parsing import (
     parse_pairwise_preference,
@@ -36,6 +36,11 @@ if TYPE_CHECKING:
     from src.ad_evaluation.llm.preference_judge import VllmPlacementComparisonJudge, VllmPreferenceJudge
 
 PreferenceCandidates = Literal["same_category", "cross_category"]
+
+
+def _cell(value: object) -> str:
+    """Reads a CSV cell the way place_ads wrote it: missing values become ''."""
+    return "" if pd.isna(value) else str(value)
 
 
 class ScorePlacementsService:
@@ -90,23 +95,27 @@ class ScorePlacementsService:
 
         all_rows: list[PlacementScore] = []
         buffer: list[PlacementScore] = []
+        unmaskable = 0
         for start in range(0, len(frame), batch_size):
             batch = frame.iloc[start : start + batch_size]
             prompts: list[str] = []
             metas: list[tuple[str, str, str, str]] = []
             for _, row in batch.iterrows():
-                query_id = "" if pd.isna(row["id"]) else str(row["id"])
-                query = "" if pd.isna(row["query"]) else str(row["query"])
-                ad_id = "" if pd.isna(row["ad_id"]) else str(row["ad_id"])
-                position = "" if pd.isna(row["position"]) else str(row["position"])
-                response = "" if pd.isna(row["response_with_ad"]) else str(row["response_with_ad"])
-                headline = "" if pd.isna(row["headline"]) else str(row["headline"])
-                description = "" if pd.isna(row["description"]) else str(row["description"])
-                cta = "" if pd.isna(row["cta"]) else str(row["cta"])
-                masked, ad_text = mask_ad_in_response(response, headline, description, cta)
+                query_id = _cell(row["id"])
+                query = _cell(row["query"])
+                ad_id = _cell(row["ad_id"])
+                position = _cell(row["position"])
+                try:
+                    masked, ad_text = mask_ad_in_response(
+                        _cell(row["response_with_ad"]), _cell(row["headline"]), _cell(row["description"]), _cell(row["cta"])
+                    )
+                except AdBlockNotFoundError:
+                    print(f"  skip id={query_id!r} position={position!r}: ad block not found, cannot mask")
+                    unmaskable += 1
+                    continue
                 prompts.append(build_user_prompt(query, masked, ad_text))
                 metas.append((query_id, query, ad_id, position))
-            raw_texts = self._judge.generate(prompts)
+            raw_texts = self._judge.generate(prompts) if prompts else []
             for meta, raw in zip(metas, raw_texts):
                 query_id, query, ad_id, position = meta
                 try:
@@ -134,6 +143,8 @@ class ScorePlacementsService:
         if buffer:
             self._writer.save(buffer, output_path, append=wrote_any)
             all_rows.extend(buffer)
+        if unmaskable:
+            print(f"Skipped {unmaskable:,} placements whose ad block could not be masked (not saved; retried on resume).")
         return all_rows
 
 
@@ -284,13 +295,14 @@ class EvaluatePlacementComparisonService:
             print(f"Resuming: {len(scored_keys):,} pairs already scored.")
 
         pairs_to_test = []
+        unmaskable = 0
         for (query_id, ad_id), group in grouped:
             query_id = str(query_id)
             ad_id = str(ad_id)
             query = str(group["query"].iloc[0])
-            headline = str(group["headline"].iloc[0])
-            description = str(group["description"].iloc[0])
-            cta = str(group["cta"].iloc[0])
+            headline = _cell(group["headline"].iloc[0])
+            description = _cell(group["description"].iloc[0])
+            cta = _cell(group["cta"].iloc[0])
             responses = {row["position"]: str(row["response_with_ad"]) for _, row in group.iterrows()}
             if "semantic" not in responses:
                 continue
@@ -298,8 +310,13 @@ class EvaluatePlacementComparisonService:
             for other_pos in ["first", "middle", "last"]:
                 if other_pos not in responses:
                     continue
-                masked_semantic, ad_block = mask_ad_in_response(responses["semantic"], headline, description, cta)
-                masked_other, _ = mask_ad_in_response(responses[other_pos], headline, description, cta)
+                try:
+                    masked_semantic, ad_block = mask_ad_in_response(responses["semantic"], headline, description, cta)
+                    masked_other, _ = mask_ad_in_response(responses[other_pos], headline, description, cta)
+                except AdBlockNotFoundError:
+                    print(f"  skip query_id={query_id!r} semantic vs {other_pos}: ad block not found, cannot mask")
+                    unmaskable += 1
+                    continue
                 orders = (
                     ("semantic", other_pos, masked_semantic, masked_other, False),
                     (other_pos, "semantic", masked_other, masked_semantic, True),
@@ -322,6 +339,8 @@ class EvaluatePlacementComparisonService:
         if limit is not None:
             pairs_to_test = pairs_to_test[:limit]
 
+        if unmaskable:
+            print(f"Skipped {unmaskable:,} position comparisons whose ad block could not be masked (retried on resume).")
         print(f"Total placement pairs to score: {len(pairs_to_test):,}")
 
         all_rows: list[PlacementComparisonScore] = []
