@@ -20,7 +20,7 @@ from src.ad_evaluation.services import EvaluatePlacementComparisonService
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Score placement comparisons pairwise (semantic vs first/middle/last) with Llama 3.3 70B (vLLM)."
+        description="Score placement comparisons pairwise (semantic vs first/middle/last) with DeepSeek-R1-Distill-Qwen-32B (vLLM)."
     )
     parser.add_argument(
         "--positions", 

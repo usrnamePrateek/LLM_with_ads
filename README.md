@@ -32,11 +32,15 @@ Evaluates the quality and flow of the injected advertisements.
 ### 5. `speed_comparison/` (Latency Benchmark)
 Compares ad retrieval latency with LLM response generation latency.
 - **`scripts/run_speed_comparison.py`**: Phased benchmark (retrieval, LLM generation, summary). `--retrieval-only --retrieval-device cpu` runs without vLLM or a GPU.
+- **`scripts/build_report.py`**: HTML report comparing the latest retrieval-only run with each model's LLM run (`data/processed/speed_comparison/reports/`).
 
 ## Shared Configuration (`src/common/`)
 
 - **`shared_config.py`**: Contains global configuration variables (model names, file paths, batch sizes) used across all modules.
 - **`shared_llm.py`**: Contains the `BaseVllmGenerator` class, which handles centralized `vLLM` instantiation, token truncation, and chat template formatting.
+- **`io.py`**, **`text.py`**, **`env.py`**: Shared query loading / CSV row writing / resume keys, LLM output cleanup, and the vLLM `PATH` fix.
+
+See `docs/PROJECT_MAP.md` for the full data flow, module rules, and known fragile spots.
 
 ## Usage
 
