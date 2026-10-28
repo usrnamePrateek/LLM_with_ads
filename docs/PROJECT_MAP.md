@@ -106,9 +106,11 @@ Running vLLM and BGE-M3 on one GPU at once can OOM, so `run()` is phased:
    search timed separately per query, sequentially; then the encoder is freed (`gc.collect`, `torch.cuda.empty_cache`).
    FAISS always runs on CPU (`faiss-cpu`). `--retrieval-only --retrieval-device cpu` needs no vLLM/GPU and writes
    `retrieval_speed_comparison_results.csv` + a summary with `llm_model="(skipped)"`.
-2. LLM: `VllmBenchmarkGenerator` generates one query at a time (single-stream), checkpointing every `checkpoint_every`.
+2. LLM: `VllmBenchmarkGenerator` generates one query at a time (single-stream), appending results to the CSV every `checkpoint_every`.
 3. Summary: `compute_distribution` (mean/std/min/p50/p90/p95/p99/max), speedup = llm_ms / retrieval_ms,
-   saved as `speed_comparison_summary.json`. If nothing is left to process, the summary is rebuilt from the run's CSV.
+   saved as `speed_comparison_summary.json`.
+   No resume, on purpose: every run gets a fresh `runs/run_<ts>/` and is measured in one sitting, so latencies are
+   never mixed across sessions. A crashed run keeps its partial CSV but no summary (`build_report` skips it); rerun it.
 
 ## Module dependencies
 - `ad_generation`, `ad_indexing` (scripts), `ad_integration`, `ad_evaluation`, `speed_comparison` -> `common`
@@ -154,7 +156,7 @@ Ad generation sampling: temp 0.7, top_p 0.8, top_k 20.
 
 Resume keys: assign_top_ads `id`; score_placements `(id, ad_id, position)`; preference/cross-category
 `(query_id, ad_1_id, ad_2_id, is_swapped)`; placement comparison `(query_id, ad_id, pos_1, pos_2, is_swapped)`
-(the last two via `common.io.load_done_keys`); speed_comparison `id` (only with explicit `--run-dir`); categories merge by `id`.
+(the last two via `common.io.load_done_keys`); categories merge by `id`. speed_comparison does not resume (see above).
 
 ## Fragile areas and known bugs
 - Masking (fixed 2026-10-29): the regex fallback could cut answer text, and placement comparison read an empty CTA as
@@ -169,7 +171,8 @@ Resume keys: assign_top_ads `id`; score_placements `(id, ad_id, position)`; pref
 - `FaissVectorStore.load` (fixed 2026-10-29) dropped `category`. `index_new` had also been built before `Ad` had a
   category, so its sidecar was backfilled from `ads.jsonl` (15,000/15,000; original kept as `ads.json.bak`)
 - Bulk generation appends to `ads.jsonl`; hand-editing or double-appending can produce duplicate ids, and `JsonlAdRepository.load` raises on duplicates
-- speed_comparison: a default run creates a new `run_<ts>` dir so resume needs `--run-dir`; on resume the summary covers only new records; `--retrieval-only` ignores checkpoints
+- speed_comparison resume (removed 2026-10-29): resuming needed `--run-dir`, gave a summary covering only the resumed
+  part, and `--retrieval-only` into an LLM run's folder overwrote its summary. Runs are now always fresh and one-sitting
 - assign_top_ads with no `id` column sets `id=""` for all rows; place_ads would then merge on empty ids (unverified impact)
 
 ## Where to look for X

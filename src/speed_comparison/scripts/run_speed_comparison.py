@@ -39,16 +39,10 @@ def parse_args() -> argparse.Namespace:
         help="Path to the FAISS index and ads metadata directory.",
     )
     parser.add_argument(
-        "--run-dir",
-        type=Path,
-        default=None,
-        help="Specific directory for this benchmark run. If not specified, creates 'run_YYYYMMDD_HHMMSS' inside output directory.",
-    )
-    parser.add_argument(
         "--output",
         type=Path,
         default=DEFAULT_OUTPUT_CSV,
-        help="Path to output comparison CSV.",
+        help="Each run writes a CSV with this name into a new run_<ts>/ folder next to it (no resume).",
     )
     parser.add_argument(
         "--summary-output",
@@ -114,7 +108,7 @@ def parse_args() -> argparse.Namespace:
         "--checkpoint-every",
         type=int,
         default=CHECKPOINT_EVERY,
-        help="Flush incremental results every N queries (default: 50).",
+        help="Write results to the CSV every N queries so a crashed run keeps its partial data (default: 50).",
     )
     return parser.parse_args()
 
@@ -129,7 +123,6 @@ def main() -> None:
         index_dir=args.index_dir,
         output_csv=args.output,
         summary_json=args.summary_output,
-        run_dir=args.run_dir,
         limit=limit,
         llm_model=args.llm_model,
         max_model_len=args.max_model_len,
