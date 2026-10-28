@@ -5,6 +5,8 @@ from src.common.shared_config import REPO_ROOT
 DEFAULT_POSITIONS_CSV = REPO_ROOT / "data/processed/ad_integration/bulk_ads/query_ad_positions.csv"
 DEFAULT_ADS_CSV = REPO_ROOT / "data/processed/ad_integration/bulk_ads/query_top1_ads.csv"
 DEFAULT_SCORES_CSV = REPO_ROOT / "data/processed/ad_evaluation/placement_scores.csv"
+DEFAULT_SAME_CATEGORY_PREF_CSV = REPO_ROOT / "data/evaluation/ad_pref_eval/same_category_pref_scores.csv"
+DEFAULT_CROSS_CATEGORY_PREF_CSV = REPO_ROOT / "data/evaluation/ad_pref_eval/cross_category_preference_scores.csv"
 
 JUDGE_MODEL_NAME = "nvidia/Llama-3.3-70B-Instruct-FP8"
 JUDGE_MAX_MODEL_LEN = 16384
