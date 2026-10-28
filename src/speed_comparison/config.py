@@ -4,9 +4,11 @@ from pathlib import Path
 from src.common.shared_config import REPO_ROOT
 
 DEFAULT_QUERIES_PARQUET = REPO_ROOT / "data/processed/lmarena/dataset/arena_preference_en_single_turn.parquet"
-DEFAULT_SPEED_COMPARISON_DIR = REPO_ROOT / "data/processed/speed_comparison"
-DEFAULT_OUTPUT_CSV = DEFAULT_SPEED_COMPARISON_DIR / "speed_comparison_results.csv"
-DEFAULT_SUMMARY_JSON = DEFAULT_SPEED_COMPARISON_DIR / "speed_comparison_summary.json"
+DEFAULT_SPEED_COMPARISON_DIR = REPO_ROOT / "data/evaluation/speed_comparison"
+# Each benchmark creates runs/run_<ts>/ next to the default output CSV; reports go to reports/.
+DEFAULT_RUNS_DIR = DEFAULT_SPEED_COMPARISON_DIR / "runs"
+DEFAULT_OUTPUT_CSV = DEFAULT_RUNS_DIR / "speed_comparison_results.csv"
+DEFAULT_SUMMARY_JSON = DEFAULT_RUNS_DIR / "speed_comparison_summary.json"
 
 DEFAULT_NUM_QUERIES = 1000
 DEFAULT_TOP_K = 1
