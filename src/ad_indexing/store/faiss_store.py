@@ -96,6 +96,7 @@ class FaissVectorStore:
                 description=item["description"],
                 cta=item.get("cta", ""),
                 embed_text=item["embed_text"],
+                category=item.get("category"),
             )
             for item in records
         ]
