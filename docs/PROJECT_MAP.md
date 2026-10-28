@@ -166,8 +166,8 @@ Resume keys: assign_top_ads `id`; score_placements `(id, ad_id, position)`; pref
 - Resume (fixed 2026-10-29): an unreadable existing output, or one missing its key columns, used to be treated as
   "nothing done" and overwritten. `common.io.read_checkpoint` now raises `CheckpointError` and leaves it untouched
   (assign_top_ads, preference/placement-comparison judges, speed benchmark)
-- `FaissVectorStore.load` (`store/faiss_store.py`) rebuilds `Ad` without `category` (sidecar has it, load ignores it).
-  Low impact today: `ad_evaluation` reads categories from `ads.jsonl`, not from the loaded store
+- `FaissVectorStore.load` (fixed 2026-10-29) dropped `category`. `index_new` had also been built before `Ad` had a
+  category, so its sidecar was backfilled from `ads.jsonl` (15,000/15,000; original kept as `ads.json.bak`)
 - Bulk generation appends to `ads.jsonl`; hand-editing or double-appending can produce duplicate ids, and `JsonlAdRepository.load` raises on duplicates
 - speed_comparison: a default run creates a new `run_<ts>` dir so resume needs `--run-dir`; on resume the summary covers only new records; `--retrieval-only` ignores checkpoints
 - assign_top_ads with no `id` column sets `id=""` for all rows; place_ads would then merge on empty ids (unverified impact)
