@@ -24,6 +24,7 @@ from src.ad_integration.repository import (
     SemanticParagraphCsvRepository,
 )
 from src.ad_integration.core.semantic import score_chunks
+from src.common.io import read_checkpoint
 
 
 class AssignTopAdService:
@@ -53,15 +54,11 @@ class AssignTopAdService:
         # Checkpointing: skip already processed queries
         processed_ids = set()
         wrote_something = False
-        if output_path.exists():
-            try:
-                existing = pd.read_csv(output_path)
-                if ID_COLUMN in existing.columns:
-                    processed_ids = set(existing[ID_COLUMN].astype(str))
-                    wrote_something = True
-                    print(f"Found existing output with {len(processed_ids):,} processed IDs.")
-            except Exception as e:
-                print(f"Warning: could not read existing output for checkpointing: {e}")
+        existing = read_checkpoint(output_path, [ID_COLUMN])
+        if existing is not None:
+            processed_ids = set(existing[ID_COLUMN].astype(str))
+            wrote_something = True
+            print(f"Found existing output with {len(processed_ids):,} processed IDs.")
 
         if ID_COLUMN in frame.columns:
             frame[ID_COLUMN] = frame[ID_COLUMN].astype(str)

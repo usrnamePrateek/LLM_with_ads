@@ -8,6 +8,7 @@ import pandas as pd
 
 from src.ad_evaluation.repository import PlacementComparisonScoreCsvRepository, PreferenceScoreCsvRepository
 from src.ad_evaluation.services import EvaluateAdPreferenceService, EvaluatePlacementComparisonService
+from src.common.io import CheckpointError
 
 ADS = [
     {"domain": "A", "ad_id": 1, "headline": "a1", "description": "d", "cta": "c", "category": "cat_a"},
@@ -122,6 +123,17 @@ class PreferencePairTests(unittest.TestCase):
             ],
         )
         self.assertEqual(len(pd.read_csv(self.output_path)), 4)
+
+    def test_damaged_existing_output_stops_the_run_instead_of_overwriting(self) -> None:
+        self._run("same_category", StubJudge(GOOD_PREFERENCE))
+        saved = pd.read_csv(self.output_path).rename(columns={"ad_1_id": "Ad 1"})
+        saved.to_csv(self.output_path, index=False)
+        before = self.output_path.read_bytes()
+        judge = StubJudge(GOOD_PREFERENCE)
+        with self.assertRaises(CheckpointError):
+            self._run("same_category", judge)
+        self.assertEqual(self.output_path.read_bytes(), before)
+        self.assertEqual(judge.prompts, [])
 
     def test_parse_failure_is_not_saved_and_retried_on_resume(self) -> None:
         rows = self._run("same_category", StubJudge(GOOD_PREFERENCE, bad_indexes={1}))

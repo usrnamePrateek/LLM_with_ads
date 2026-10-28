@@ -39,15 +39,37 @@ def save_rows(rows: Sequence[Any], path: Path, *, append: bool = False, label: s
     print(f"Saved {len(rows):,} {label} to {path}")
 
 
+class CheckpointError(RuntimeError):
+    """An existing output file cannot be used to resume, so the run stops instead of overwriting it."""
+
+
+def read_checkpoint(path: Path, columns: Sequence[str], **read_csv_kwargs: Any) -> pd.DataFrame | None:
+    """Reads an existing output CSV to resume from.
+
+    Returns None when there is nothing to resume (file missing or 0 bytes). Raises CheckpointError when the file
+    exists but cannot be read or lacks any of `columns`: starting fresh would overwrite it on the first save.
+    """
+    if not path.exists() or path.stat().st_size == 0:
+        return None
+    try:
+        existing = pd.read_csv(path, **read_csv_kwargs)
+    except Exception as exc:
+        raise CheckpointError(f"cannot read existing output {path} to resume ({exc}); fix or move it, then rerun") from exc
+    missing = [column for column in columns if column not in existing.columns]
+    if missing:
+        raise CheckpointError(
+            f"existing output {path} is missing columns {missing}, so it cannot be resumed; fix or move it, then rerun"
+        )
+    return existing
+
+
 def load_done_keys(path: Path, columns: Sequence[str]) -> set[tuple[str, ...]] | None:
     """Returns the key tuples already written to a checkpoint CSV (read as str).
 
-    Returns None when the file is missing or lacks any of the key columns, so callers can tell
-    "nothing to resume" apart from "resumed with zero rows".
+    Returns None when there is nothing to resume, so callers can tell "start fresh" apart from
+    "resumed with zero rows". Raises CheckpointError for an unusable existing file (see read_checkpoint).
     """
-    if not path.exists():
-        return None
-    existing = pd.read_csv(path, dtype=str)
-    if not all(column in existing.columns for column in columns):
+    existing = read_checkpoint(path, columns, dtype=str)
+    if existing is None:
         return None
     return set(zip(*(existing[column] for column in columns)))
