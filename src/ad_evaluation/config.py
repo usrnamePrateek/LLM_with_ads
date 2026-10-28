@@ -4,7 +4,7 @@ from src.common.shared_config import REPO_ROOT
 
 DEFAULT_POSITIONS_CSV = REPO_ROOT / "data/processed/ad_integration/bulk_ads/query_ad_positions.csv"
 DEFAULT_ADS_CSV = REPO_ROOT / "data/processed/ad_integration/bulk_ads/query_top1_ads.csv"
-DEFAULT_SCORES_CSV = REPO_ROOT / "data/processed/ad_evaluation/placement_scores.csv"
+DEFAULT_SCORES_CSV = REPO_ROOT / "data/evaluation/ad_placement_eval/placement_scores.csv"
 DEFAULT_SAME_CATEGORY_PREF_CSV = REPO_ROOT / "data/evaluation/ad_pref_eval/same_category_pref_scores.csv"
 DEFAULT_CROSS_CATEGORY_PREF_CSV = REPO_ROOT / "data/evaluation/ad_pref_eval/cross_category_preference_scores.csv"
 DEFAULT_PLACEMENT_COMPARISON_CSV = REPO_ROOT / "data/evaluation/ad_placement_eval/placement_comparison_scores.csv"
