@@ -14,3 +14,5 @@
 - Never read or dump `data/`, `.lmarena-env/`, or notebook outputs in `analysis/`; they are large.
 - `src/ad_generation/llm/__init__.py` and `src/common/shared_llm.py` have uncommitted user edits; don't revert them.
 - Unit tests must not hit the network or GPU.
+
+- Project map (module responsibilities, data flow, fragile spots, "where to look"): `docs/PROJECT_MAP.md` (read on demand).
