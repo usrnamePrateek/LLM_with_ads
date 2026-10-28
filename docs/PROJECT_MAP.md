@@ -41,7 +41,8 @@ All paths below are under `src/` unless noted.
 3. `generate_bulk_ads.py` -> `GenerateBulkAdsService` + `VllmBulkAdGenerator`: reads `lmarena/taxonomy_subtopics.csv`,
    `--target-ads` default 1000, APPENDS to `ads/ads.jsonl`, resumes from per-domain counts
    - ad record: domain, ad_id, headline, description, cta, category, subtopic
-4. `ad_indexing/scripts/build_index.py` -> `IndexAdsService` -> `ads/index/index.faiss` + `ads.json` sidecar.
+4. `ad_indexing/scripts/build_index.py` -> `IndexAdsService` -> `ads/index_new/index.faiss` + `ads.json` sidecar
+   (`DEFAULT_INDEX_DIR`; the old `ads/index` holds the earlier 1,560-ad set from `ads_old.jsonl` and is unused).
    Ad id is `"{domain}::{ad_id}"` (`entities.make_ad_id`); embed text = headline + "\n" + description.
 5. `ad_integration/scripts/assign_top_ads.py` -> `AssignTopAdService`: encode queries, `store.query`, take hit 0
    -> `generation/bulk_ads/query_top1_ads.csv` (id, query, ad_id, ad_domain, headline, description, cta, score). Resumes by `id`.
@@ -120,7 +121,7 @@ Running vLLM and BGE-M3 on one GPU at once can OOM, so `run()` is phased:
 | Categorization | `Qwen/Qwen3-32B` (batch 32, len 32768, 3 retries, gpu 0.90) |
 | Placement comparison judge | `deepseek-ai/DeepSeek-R1-Distill-Qwen-32B` (len 131072, 4096 tok, batch 32, fp8 hardcoded) |
 | Embeddings | `BAAI/bge-m3`, `IndexFlatIP`, top-k 5 (indexing default) / 1 (integration) |
-| Speed bench | 1000 queries, 512 new tokens, temp 0, index at `ads/index_new` |
+| Speed bench | 1000 queries, 512 new tokens, temp 0, shared `DEFAULT_INDEX_DIR` (`ads/index_new`) |
 Ad generation sampling: temp 0.7, top_p 0.8, top_k 20.
 
 ## External services, env vars, hardware

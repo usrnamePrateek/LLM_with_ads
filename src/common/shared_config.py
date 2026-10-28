@@ -18,7 +18,7 @@ AD_GPU_MEMORY_UTILIZATION = 0.95
 
 # ── Data paths shared across modules ─────────────────────────────────────────
 DEFAULT_ADS_JSONL = REPO_ROOT / "data/processed/ads/ads.jsonl"
-DEFAULT_INDEX_DIR = REPO_ROOT / "data/processed/ads/index"
+DEFAULT_INDEX_DIR = REPO_ROOT / "data/processed/ads/index_new"  # built from ads.jsonl (15k ads); ads/index is the old 1,560-ad set
 
 DEFAULT_ARENA_OUTPUT_DIR = REPO_ROOT / "data/processed/lmarena/dataset"
 DEFAULT_QUERIES_INPUT = REPO_ROOT / "data/processed/lmarena/dataset/arena_preference_en_single_turn.parquet"

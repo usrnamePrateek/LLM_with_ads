@@ -7,7 +7,6 @@ from pathlib import Path
 from src.speed_comparison.config import (
     CHECKPOINT_EVERY,
     DEFAULT_GPU_MEMORY_UTILIZATION,
-    DEFAULT_INDEX_DIR,
     DEFAULT_LLM_MODEL,
     DEFAULT_MAX_MODEL_LEN,
     DEFAULT_MAX_NEW_TOKENS,
@@ -19,6 +18,7 @@ from src.speed_comparison.config import (
     DEFAULT_TEMPERATURE,
     DEFAULT_TOP_K,
 )
+from src.common.shared_config import DEFAULT_INDEX_DIR
 from src.speed_comparison.services import SpeedComparisonOrchestrator
 
 
