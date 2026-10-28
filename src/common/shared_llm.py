@@ -10,7 +10,7 @@ except ImportError:
     SamplingParams = None
     StructuredOutputsParams = None
 
-from src.ad_generation.llm.parsing import strip_thinking
+from src.common.text import strip_thinking
 
 
 class BaseVllmGenerator:

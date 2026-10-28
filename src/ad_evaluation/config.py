@@ -1,12 +1,6 @@
 """Configuration variables for the LLM-as-a-judge placement evaluation pipeline."""
 
-from src.common.shared_config import (
-    AD_GPU_MEMORY_UTILIZATION,
-    AD_MODEL_NAME,
-    DEFAULT_OUTPUT_CSV,
-    DEFAULT_PLACED_ADS_CSV,
-    REPO_ROOT,
-)
+from src.common.shared_config import REPO_ROOT
 
 DEFAULT_POSITIONS_CSV = REPO_ROOT / "data/processed/generation/bulk_ads/query_ad_positions.csv"
 DEFAULT_ADS_CSV = REPO_ROOT / "data/processed/generation/bulk_ads/query_top1_ads.csv"

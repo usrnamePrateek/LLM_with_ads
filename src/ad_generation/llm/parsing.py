@@ -6,11 +6,7 @@ import re
 
 from src.ad_generation.config import CATEGORY_COLUMNS
 from src.ad_generation.entities import AdCreative, QueryCategory
-
-
-def strip_thinking(text: str) -> str:
-    """Removes thinking tokens (e.g. <think>...</think>) often produced by reasoning models."""
-    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+from src.common.text import strip_thinking
 
 
 def extract_json_value(raw: str) -> dict | list | str | int | float | bool | None:

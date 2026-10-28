@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from src.ad_generation.llm.parsing import strip_thinking
+from src.common.text import strip_thinking
 from src.ad_indexing.embeddings.base import EmbeddingEncoder
 from src.ad_indexing.embeddings.bge_m3 import BgeM3Encoder
 from src.ad_indexing.store.base import VectorStore
