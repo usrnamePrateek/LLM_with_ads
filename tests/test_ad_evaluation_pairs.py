@@ -123,11 +123,16 @@ class PreferencePairTests(unittest.TestCase):
         )
         self.assertEqual(len(pd.read_csv(self.output_path)), 4)
 
-    def test_parse_failure_becomes_error_row(self) -> None:
+    def test_parse_failure_is_not_saved_and_retried_on_resume(self) -> None:
         rows = self._run("same_category", StubJudge(GOOD_PREFERENCE, bad_indexes={1}))
-        self.assertEqual(rows[1].winner_ad_id, "ERROR")
-        self.assertTrue(rows[1].confidence.startswith("parse_error: "))
-        self.assertEqual(rows[0].winner_ad_id, "A::1")
+        self.assertEqual(self._pairs(rows), [("q1", "A::1", "A::2", False), ("q1", "A::1", "A::3", False), ("q1", "A::3", "A::1", True)])
+        self.assertNotIn("ERROR", set(pd.read_csv(self.output_path, dtype=str)["winner_ad_id"]))
+
+        judge = StubJudge(GOOD_PREFERENCE)
+        rows = self._run("same_category", judge)
+        self.assertEqual(self._pairs(rows), [("q1", "A::2", "A::1", True)])
+        self.assertEqual(len(judge.prompts), 1)
+        self.assertEqual(len(pd.read_csv(self.output_path)), 4)
 
 
 class PlacementComparisonPairTests(unittest.TestCase):
@@ -175,12 +180,16 @@ class PlacementComparisonPairTests(unittest.TestCase):
                 ("q1", "semantic", "middle", False),
                 ("q1", "middle", "semantic", True),
                 ("q1", "semantic", "last", False),
-                ("q1", "last", "semantic", True),
             ],
         )
         self.assertEqual(rows[0].winner_pos, "first")
-        self.assertEqual(rows[5].winner_pos, "ERROR")
         self.assertTrue(all("[ad slot]" in prompt for prompt in judge.prompts))
+        self.assertEqual(len(pd.read_csv(self.output_path)), 5)
+
+        # The unparsed pair is asked again on resume; nothing else is re-judged.
+        rows = self._run(StubJudge(GOOD_PLACEMENT))
+        self.assertEqual([(r.pos_1, r.pos_2, r.is_swapped) for r in rows], [("last", "semantic", True)])
+        self.assertEqual(len(pd.read_csv(self.output_path)), 6)
 
         saved = pd.read_csv(self.output_path, dtype=str)
         saved.head(2).to_csv(self.output_path, index=False)

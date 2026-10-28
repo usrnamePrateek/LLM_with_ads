@@ -140,7 +140,8 @@ Ad generation sampling: temp 0.7, top_p 0.8, top_k 20.
 - Most scripts accept `--limit N`; use it for smoke runs
 - Tests: `./run_vllm.sh -m unittest discover -s tests -t .`. No pytest/lint/typecheck configured.
   Tests must not hit network/GPU; `test_speed_services.py` imports torch (CPU only, ~5 s)
-- Debug: failures are printed (not logged); parse failures become rows (`score=0`, winner "ERROR") or are skipped
+- Debug: failures are printed (not logged). Judge answers that fail to parse, and responses whose ad block cannot be
+  masked, are counted and not saved, so the next resume retries them (a prompt that always fails retries forever)
 
 ## Conventions
 - Checkpointing: append-mode CSV/JSONL via `common.io.save_rows`, skip done keys on restart
@@ -157,7 +158,8 @@ Resume keys: assign_top_ads `id`; score_placements `(id, ad_id, position)`; pref
 - Masking (fixed 2026-10-29): the regex fallback could cut answer text, and placement comparison read an empty CTA as
   "nan". An audit of `ad_integration/bulk_ads/` (146,316 placed responses) found 100% exact matches and no empty CTAs,
   so existing judge results were not affected
-- Parse failures are saved as completed rows (score 0 / "ERROR"), so resume never retries them
+- Parse failures (fixed 2026-10-29) used to be saved as rows (score 0 / "ERROR") and never retried. Existing data:
+  2 such rows in the archived `ad_placement_eval/old/placement_scores.csv`, none in the pairwise results
 - `place_ads` has no resume and deletes outputs at start; a crash loses the run
 - Resume code with missing columns or unreadable files can silently overwrite the existing output (assign_top_ads, preference services)
 - `FaissVectorStore.load` (`store/faiss_store.py`) rebuilds `Ad` without `category` (sidecar has it, load ignores it).

@@ -79,6 +79,16 @@ class ServiceMaskingTests(unittest.TestCase):
         self.assertTrue(all("Try Acme VPN" not in p.split("[ad slot]")[0] for p in judge.prompts))
         self.assertEqual(len(pd.read_csv(output)), 4)
 
+    def test_score_placements_does_not_save_unparsed_answers(self) -> None:
+        output = self.root / "scores.csv"
+        service = lambda judge: ScorePlacementsService(PlacementInputRepository(), PlacementScoreCsvRepository(), judge)
+        self.assertEqual(service(StubJudge("not json")).run(self.positions_path, self.ads_path, output_path=output), [])
+        self.assertFalse(output.exists())
+
+        rows = service(StubJudge('{"score": 4, "reason": "fine"}')).run(self.positions_path, self.ads_path, output_path=output)
+        self.assertEqual(len(rows), 4)
+        self.assertEqual(set(pd.read_csv(output)["score"]), {4})
+
     def test_placement_comparison_masks_empty_cta_and_skips_unmaskable(self) -> None:
         judge = StubJudge('{"winner_pos": "pos_1", "confidence": "high"}')
         rows = EvaluatePlacementComparisonService(PlacementComparisonScoreCsvRepository(), judge).run(
