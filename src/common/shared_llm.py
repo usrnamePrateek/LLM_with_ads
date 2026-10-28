@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 import torch
-from vllm import LLM, SamplingParams
-from vllm.sampling_params import StructuredOutputsParams
+
+try:
+    from vllm import LLM, SamplingParams
+    from vllm.sampling_params import StructuredOutputsParams
+except ImportError:
+    LLM = None
+    SamplingParams = None
+    StructuredOutputsParams = None
 
 from src.ad_generation.llm.parsing import strip_thinking
 
@@ -27,6 +33,12 @@ class BaseVllmGenerator:
         quantization: str | None = None,
         enable_thinking: bool = False,
     ) -> None:
+        if LLM is None or SamplingParams is None:
+            raise ImportError(
+                f"vLLM is required to instantiate {self.__class__.__name__}, but 'vllm' is not installed in the current environment. "
+                "Please install vLLM (e.g. following docs/requirements-vllm.txt) or run retrieval-only workloads."
+            )
+
         if dtype == "float16" and not torch.cuda.is_available():
             raise SystemExit(f"CUDA GPU is required for {model_name} fp16")
         
