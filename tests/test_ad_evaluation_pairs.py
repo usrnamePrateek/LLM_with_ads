@@ -96,6 +96,19 @@ class PreferencePairTests(unittest.TestCase):
             ["query_id", "query", "ad_1_id", "ad_2_id", "winner_ad_id", "confidence", "is_swapped"],
         )
 
+    def test_single_order_skips_swapped_pairs(self) -> None:
+        service = _make_preference_service("cross_category", StubJudge(GOOD_PREFERENCE))
+        rows = service.run(
+            assignments_path=self.assignments_path,
+            ads_path=self.ads_path,
+            output_path=self.output_path,
+            both_orders=False,
+        )
+        self.assertEqual(
+            self._pairs(rows),
+            [("q1", "A::1", "B::1", False), ("q1", "A::1", "B::2", False)],
+        )
+
     def test_cross_category_pairs_in_order(self) -> None:
         rows = self._run("cross_category", StubJudge(GOOD_PREFERENCE))
         self.assertEqual(

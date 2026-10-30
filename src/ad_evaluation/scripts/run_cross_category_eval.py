@@ -43,6 +43,11 @@ def main() -> int:
         default=128,
         help="vLLM batch size",
     )
+    parser.add_argument(
+        "--single-order",
+        action="store_true",
+        help="Judge each pair once (assigned ad as ad_1) instead of in both orders",
+    )
     args = parser.parse_args()
 
     judge = VllmPreferenceJudge()
@@ -56,6 +61,7 @@ def main() -> int:
             output_path=args.output,
             limit=args.limit,
             batch_size=args.batch_size,
+            both_orders=not args.single_order,
         )
     except KeyboardInterrupt:
         print("\nInterrupted by user. Checkpoint has been saved.")

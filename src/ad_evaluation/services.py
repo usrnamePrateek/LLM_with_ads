@@ -171,6 +171,7 @@ class EvaluateAdPreferenceService:
 
     `same_category` compares against the other ads in the assigned ad's category;
     `cross_category` compares against every ad in all other categories.
+    With `both_orders=False`, only the unswapped order (assigned ad as ad_1) is judged.
     """
     def __init__(
         self,
@@ -199,6 +200,7 @@ class EvaluateAdPreferenceService:
         output_path: Path,
         limit: int | None = None,
         batch_size: int = 100,
+        both_orders: bool = True,
     ) -> list[PairwisePreferenceScore]:
         assignments = pd.read_csv(assignments_path)
         if limit is not None:
@@ -227,7 +229,7 @@ class EvaluateAdPreferenceService:
             for other in self._candidate_ads(selected, ads_by_category):
                 if (query_id, selected.id, other.id, "False") not in scored_keys:
                     pairs.append(_PreferencePair(query_id, query, selected, other, is_swapped=False))
-                if (query_id, other.id, selected.id, "True") not in scored_keys:
+                if both_orders and (query_id, other.id, selected.id, "True") not in scored_keys:
                     pairs.append(_PreferencePair(query_id, query, other, selected, is_swapped=True))
 
         label = "preference" if self._candidates == "same_category" else "cross-category preference"
